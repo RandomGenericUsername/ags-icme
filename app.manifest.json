@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "app": "icme",
+  "instance": "icon-color-mapping-editor",
+  "configDir": "ags-icme",
+  "mode": "live",
+  "holdsUnsavedState": true
+}

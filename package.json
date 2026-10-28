@@ -1,0 +1,10 @@
+{
+  "name": "ags-icme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone AGS icon color mapping editor (instance icon-color-mapping-editor, config dir ags-icme).",
+  "exports": {
+    ".": "./app.tsx"
+  }
+}
