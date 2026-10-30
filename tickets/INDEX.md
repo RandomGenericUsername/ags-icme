@@ -13,7 +13,7 @@
 
 ## Bugs
 
-(none)
+- [BUG-001-window-identity-stale-palette/ticket.md](./BUG-001-window-identity-stale-palette/ticket.md) — ICME window identity mismatch and stale palette UI | `blocked` | severity: high | no hotfix by decision (architecture first); fixed with ags-platform REQ-013 migration
 
 ## Ops tasks
 
