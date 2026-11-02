@@ -2,7 +2,7 @@
 id: REQ-003
 title: "Migrate ICME chrome and token list to palette.v1 roles"
 kind: requirement
-status: in-progress
+status: done
 lane: 3
 links:
   openspec: none
@@ -35,19 +35,49 @@ loaded inputs survive a refresh.
 
 ## Acceptance
 
-- [ ] `rg -n '@color_' . --glob '*.css' --glob '*.ts' --glob '*.tsx' --glob '!node_modules' --glob '!build'` returns zero.
-- [ ] Chrome roles by intent: ink `@on_surface`; panels `@surface` /
+- [x] `rg -n '@color_' . --glob '*.css' --glob '*.ts' --glob '*.tsx' --glob '!node_modules' --glob '!build'` returns zero.
+- [x] Chrome roles by intent: ink `@on_surface`; panels `@surface` /
       `@surface_container*`; accent/actions `@primary` / `@on_primary`;
       attention `@tertiary`; muted `@on_surface_variant`; errors `@error*`.
       Alpha, geometry and selectors keep their existing shape.
-- [ ] `rg -n 'current/colors.yaml|colors\.yaml'` finds no direct read in app
+- [x] `rg -n 'current/colors.yaml|colors\.yaml'` finds no direct read in app
       source; only provider calls remain. Any fixture is justified explicitly.
-- [ ] Token picker and mini picker iterate `PALETTE_V1_ROLES`, not `colorN`.
-- [ ] Previews resolve mappings through the provider's role/hex map.
-- [ ] Platform pin is `v0.4.0`; contracts stays `v0.3.0`.
-- [ ] `make gates` passes; screenshots of chrome + token picker before/after are
+- [x] Token picker and mini picker iterate `PALETTE_V1_ROLES`, not `colorN`.
+- [x] Previews resolve mappings through the provider's role/hex map.
+- [x] Platform pin is `v0.4.0`; contracts stays `v0.3.0`.
+- [x] `make gates` passes; screenshots of chrome + token picker before/after are
       recorded (isolated instance; the live ICME is not disturbed).
 
 ## Evidence
 
-- Implementation commit on `ticket/BUG-001-window-identity-stale-palette`.
+Implementation commit `1669900` on
+`ticket/BUG-001-window-identity-stale-palette`; detailed live evidence is on
+BUG-001.
+
+- `rg -n '@color_' . --glob '*.css' --glob '*.ts' --glob '*.tsx'
+  --glob '!node_modules' --glob '!build'` → **0 matches**. The frozen
+  `templates/ags-app/style.css` was migrated too (`@on_surface`), so the gate
+  covers the next app as well.
+- `rg -n 'current/colors.yaml|colors\.yaml' . --glob '!node_modules'
+  --glob '!build' --glob '!.git'` → only prose in `README.md`, `AGENTS.md`,
+  `CHANGELOG.md` and the two tickets; **no app source match**. The test that
+  asserts absence is itself the only other mention.
+- Role mapping: `@color_foreground → @on_surface`, `@color_00 → @surface`,
+  `@color_01 → @surface_container`, `@color_03/@color_04 → @tertiary`,
+  `@color_06/@color_10 → @primary`, `@color_07 → @surface_container_high`,
+  `@color_08 → @error`, `@color_background → @on_primary`,
+  `@color_15 → @on_surface_variant`. Alpha/geometry/selectors unchanged.
+- Token model: `lib/palette.ts` re-exports `PALETTE_V1_ROLES` as `ROLE_TOKENS`;
+  `TokenPicker` renders the 51 roles, `SelectionPanel`'s mini grid filters the
+  same list, and `TemplatesTab` uses it too. `tests/palette.mjs` pins 51 roles,
+  `on_backdrop`, no `colorN`, and role/hex resolution.
+- Previews: `Preview` takes the provider role map instead of
+  `MappingShow.palette`; the current-token label resolves via
+  `resolveTokenHex(token, palette())`.
+- Pin: `Makefile`/CI `AGS_PLATFORM_VERSION := v0.4.0`, contracts `v0.3.0`.
+- `make gates` exit 0 (log `/tmp/opencode/icme-verify/gates.log`): test suites
+  all green including `palette cases agree`, conformance 13/13, drift 46/46,
+  bundle 965852 bytes, typecheck 0 in-tree errors.
+- Screenshots: `/tmp/opencode/icme-verify/before.png`,
+  `/tmp/opencode/icme-verify/after-A.png`,
+  `/tmp/opencode/icme-verify/after-B.png`.

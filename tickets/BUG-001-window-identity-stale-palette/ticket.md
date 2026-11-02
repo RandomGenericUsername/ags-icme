@@ -2,7 +2,7 @@
 id: BUG-001
 title: "ICME window identity mismatch and stale palette UI"
 kind: bug
-status: in-progress
+status: done
 lane: 3
 links:
   openspec: none
@@ -61,12 +61,56 @@ migration is split into companion REQ-003.
 
 ## Acceptance
 
-- [ ] Window identity matches across launcher, manifest, and source; toggle
+- [x] Window identity matches across launcher, manifest, and source; toggle
       focuses the existing window twice in a row.
-- [ ] Changing palette (the two cached palettes) with ICME open updates its
+- [x] Changing palette (the two cached palettes) with ICME open updates its
       chrome and token list without restart.
-- [ ] Live verification recorded for both palettes (dark and light-ish cache
+- [x] Live verification recorded for both palettes (dark and light-ish cache
       entries), without changing the user's wallpaper.
+
+## Fix / evidence
+
+Implementation commit `1669900` on
+`ticket/BUG-001-window-identity-stale-palette` (worktree `.worktrees/BUG-001/`).
+
+- **Window name decision:** `icon-color-mapping-editor-window`
+  (`<instance>-window`). `ui/EditorWindow.tsx` now exports one `WINDOW_NAME`,
+  uses it for `name={WINDOW_NAME}` and `app.get_window(WINDOW_NAME)`, and
+  `style.css` selects `window#icon-color-mapping-editor-window`.
+  **No cross-repo launcher change is required**: the provisioned launcher
+  already probes `"${INSTANCE}-window"` first. Its comment still calls
+  `icme-window` the icon editor's window
+  (`dotfiles-provision/ansible/roles/ags_apps_units/templates/ags-app-launcher.j2`);
+  that comment should be updated in its own repo when convenient. The installed
+  launcher in this session has the same already-working probe.
+- **Provider migration:** `ui/EditorWindow.tsx` uses `theme.palette().roles` and
+  `theme.subscribe()`; `lib/inputs.ts` no longer resolves or fingerprints a
+  palette path; `lib/itr.ts` no longer passes `--color-scheme`. The role map is
+  passed to Preview / TokenPicker / SelectionPanel / TemplatesTab, so previews
+  and pickers resolve through the provider. `lib/palette.ts` owns the role list,
+  fingerprint and token resolution.
+- **Live toggle:** isolated branch instance (temp `XDG_*`, palette A). Two
+  consecutive `ags toggle icon-color-mapping-editor-window -i
+  icon-color-mapping-editor` calls succeeded; the log has **zero**
+  `no window registered` lines (only the pre-existing AT-SPI Gtk-CRITICAL).
+- **Live palette propagation:** the temp `current/colors.yaml` symlink was
+  repointed from cached palette A (`primary #b9c3ff`, `surface #121318`) to
+  cached palette B (`primary #fcb974`, `surface #19120c`) with the window open.
+  Chrome and token hexes repainted with no restart; `ags request
+  palette-refresh verification -i icon-color-mapping-editor` answered
+  `{"ok":true}`.
+- Screenshots: `/tmp/opencode/icme-verify/before.png` (main/legacy chrome +
+  `colorN` grid), `/tmp/opencode/icme-verify/after-A.png` (roles, palette A),
+  `/tmp/opencode/icme-verify/after-B.png` (same instance after repoint, palette
+  B). The user's wallpaper and `~/.local/state/dotfiles/current/colors.yaml`
+  were not changed (both instances used a temp state tree; the live link still
+  points at `c4fa1eb…`).
+- Regression gate: `tests/app-contract.test.mjs` asserts the
+  `<instance>-window` name, `theme.palette()` + `theme.subscribe()`, no direct
+  palette artifact read, and zero legacy `@color_*` in the stylesheet.
+- Gates: `make gates` exit 0 (`/tmp/opencode/icme-verify/gates.log`):
+  six pure suites + palette 10/10, conformance 13/13, drift 46/46, bundle
+  965852 bytes, typecheck 0 in-tree errors.
 
 ## Evidence / Verify
 
