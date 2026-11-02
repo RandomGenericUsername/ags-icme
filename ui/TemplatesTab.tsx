@@ -5,6 +5,7 @@ import Pango from "gi://Pango?version=1.0";
 import { createEffect, createState, type Accessor } from "ags";
 import { templateAnalyze, templateScan, type MappingShow } from "../lib/itr";
 import type { EditorInputs } from "../lib/inputs";
+import { ROLE_TOKENS, type RoleMap } from "../lib/palette";
 import type {
   ManifestPending,
   TemplateMode,
@@ -49,6 +50,7 @@ function pixbufForSvg(svg: string): GdkPixbuf.Pixbuf {
 
 export interface TemplatesTabProps {
   show: Accessor<MappingShow | null>;
+  palette: Accessor<RoleMap>;
   inputs: Accessor<EditorInputs>;
   templatePending: Accessor<ReadonlyMap<string, TemplatePendingEdit>>;
   newPlaceholders: Accessor<ReadonlyMap<string, string>>;
@@ -90,7 +92,7 @@ export function TemplatesTab(props: TemplatesTabProps) {
   }
 
   function hexOfToken(token: string): string | null {
-    const palette = props.show()?.palette ?? {};
+    const palette = props.palette();
     return token.startsWith("#") ? token : (palette[token] ?? null);
   }
 
@@ -122,7 +124,7 @@ export function TemplatesTab(props: TemplatesTabProps) {
     const shapes = currentShapes();
     if (body === "") return "";
     const mappings = currentMappings();
-    const palette = props.show()?.palette ?? {};
+    const palette = props.palette();
     const painted = renderPreviewBody(body, shapes, (s) =>
       s.ph !== null ? `{{${s.ph}}}` : s.literal,
     );
@@ -669,10 +671,8 @@ export function TemplatesTab(props: TemplatesTabProps) {
       mini.remove(child);
       child = next;
     }
-    const palette = props.show()?.palette ?? {};
-    const colorKeys = Object.keys(palette)
-      .filter((k) => /^color\d+$/.test(k))
-      .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)));
+    const palette = props.palette();
+    const colorKeys = ROLE_TOKENS.filter((role) => palette[role] !== undefined);
     colorKeys.forEach((token, i) => {
       const active = choice();
       const picked = active?.kind === "new" && active.token === token;
@@ -742,11 +742,7 @@ export function TemplatesTab(props: TemplatesTabProps) {
       const mapped = props.newPlaceholders().get(shape.ph) ?? currentMappings()[shape.ph];
       if (mapped) return mapped;
     }
-    const palette = props.show()?.palette ?? {};
-    const keys = Object.keys(palette)
-      .filter((k) => /^color\d+$/.test(k))
-      .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)));
-    return keys[0] ?? "color1";
+    return ROLE_TOKENS.includes("on_surface") ? "on_surface" : ROLE_TOKENS[0] ?? "on_surface";
   }
 
   return root;

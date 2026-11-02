@@ -152,9 +152,17 @@ test("the manifest is schema-valid and carries the ICME identity", () => {
 test("the manifest agrees with app.tsx, the window and the stylesheet", () => {
   const app = readText("app.tsx");
   const window = readText("ui", "EditorWindow.tsx");
+  const css = readText("style.css");
   assert.match(app, /instanceName:\s*"icon-color-mapping-editor"/);
-  assert.match(window, /name="icme-window"/);
-  assert.match(readText("style.css"), /window#icme-window/);
+  // `<instance>-window` is the manifest convention the launcher probes first.
+  assert.match(
+    window,
+    /export const WINDOW_NAME = "icon-color-mapping-editor-window"/,
+  );
+  assert.match(window, /name=\{WINDOW_NAME\}/);
+  assert.match(window, /app\.get_window\(WINDOW_NAME\)/);
+  assert.doesNotMatch(window, /name="icme-window"/);
+  assert.match(css, /window#icon-color-mapping-editor-window/);
 });
 
 test("the launcher, keybind description and config dir are documented", () => {
@@ -222,9 +230,9 @@ test("the contracts v0.3.0 schema keeps restart invalid for this app", () => {
   assert.equal(IDENTITY.holdsUnsavedState, true);
 });
 
-test("the Makefile pins the v0.3.0 program tuple", () => {
+test("the Makefile pins the v0.4.0 platform provider and v0.3.0 contracts", () => {
   const makefile = readText("Makefile");
-  assert.match(makefile, /^AGS_PLATFORM_VERSION := v0\.3\.0$/m);
+  assert.match(makefile, /^AGS_PLATFORM_VERSION := v0\.4\.0$/m);
   assert.match(makefile, /^CONTRACTS_VERSION := v0\.3\.0$/m);
 });
 
@@ -257,10 +265,12 @@ test("the refresh defers during save, is busy while refreshing, and is fingerpri
 
   assert.match(refresh, /if \(saving\(\)\) return \{ status: "deferred", reason: /);
   assert.match(refresh, /if \(schemeRefreshing\) return \{ status: "busy" \}/);
-  assert.match(refresh, /const fp = schemeFingerprint\(inputs\(\)\.colorScheme\)/);
-  assert.match(refresh, /if \(fp === schemeFp\) return \{ status: "applied" \}/);
-  assert.match(refresh, /schemeFp = fp/);
+  assert.match(refresh, /const roles = providerRoles\(\)/);
+  assert.match(refresh, /const fp = paletteFingerprint\(roles\)/);
+  assert.match(refresh, /if \(fp === paletteFp\) return \{ status: "applied" \}/);
+  assert.match(refresh, /paletteFp = fp/);
   assert.match(refresh, /schemeRefreshing = true/);
+  assert.match(refresh, /setPalette\(roles\)/);
   assert.match(refresh, /await refreshShow\(\)/);
   assert.match(refresh, /return \{ status: "applied" \}/);
   assert.match(refresh, /finally \{\s*schemeRefreshing = false/);
@@ -296,4 +306,54 @@ test("the editor no longer follows wallpaper.state for palette", () => {
   assert.doesNotMatch(window, /domainEvents\.subscribe/);
   assert.doesNotMatch(window, /WALLPAPER_STATE_TOPIC/);
   assert.match(window, /paletteRefresh|palette-refresh/);
+});
+
+test("the editor consumes the platform palette provider and offers palette.v1 roles", () => {
+  const window = readText("ui", "EditorWindow.tsx");
+  const picker = readText("ui", "TokenPicker.tsx");
+  const palette = readText("lib", "palette.ts");
+  const mini = readText("ui", "SelectionPanel.tsx");
+
+  assert.match(window, /from\s+"ags-platform\/adapters\/theme"/);
+  assert.match(window, /theme\.palette\(\)/);
+  assert.match(window, /theme\.subscribe\(/);
+  assert.match(palette, /PALETTE_V1_ROLES/);
+  assert.match(picker, /ROLE_TOKENS/);
+  assert.match(mini, /ROLE_TOKENS/);
+  assert.doesNotMatch(picker, /\^color\\d\+\$/);
+  assert.doesNotMatch(mini, /\^color\\d\+\$/);
+  for (const [name, source] of [
+    ["app.tsx", readText("app.tsx")],
+    ["ui/EditorWindow.tsx", window],
+    ["ui/TokenPicker.tsx", picker],
+    ["ui/SelectionPanel.tsx", mini],
+    ["ui/Preview.tsx", readText("ui", "Preview.tsx")],
+    ["lib/inputs.ts", readText("lib", "inputs.ts")],
+    ["lib/itr.ts", readText("lib", "itr.ts")],
+  ]) {
+    // A direct artifact read is the defect this migration removes. The string
+    // appears only in this gate; the app resolves roles through the provider.
+    assert.doesNotMatch(
+      source,
+      /current\/colors\.yaml|colors\.yaml/,
+      `${name} must not read the palette artifact directly`,
+    );
+  }
+});
+
+test("the chrome stylesheet uses palette.v1 roles only", () => {
+  const css = readText("style.css");
+  assert.doesNotMatch(css, /@color_/);
+  for (const role of [
+    "@surface",
+    "@surface_container",
+    "@on_surface",
+    "@on_surface_variant",
+    "@primary",
+    "@on_primary",
+    "@tertiary",
+    "@error",
+  ]) {
+    assert.match(css, new RegExp(role.replace("@", "\\@")), `CSS must use ${role}`);
+  }
 });

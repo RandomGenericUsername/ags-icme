@@ -10,7 +10,7 @@
 //   - manifest:   <repo>/dotfiles/config/icon-template-color-scheme-mappings/icons.yaml
 //                 or ~/.local/share/dotfiles/icon-mappings/icons.yaml
 //   - templates:  <repo>/dotfiles/assets/icon-templates/ or spine
-//   - scheme:     the generated palette (always machine-local)
+//   - palette:    the platform Theme provider (never a path read here)
 // ICME_* environment overrides and the in-app pickers take precedence.
 
 import GLib from "gi://GLib?version=2.0";
@@ -19,14 +19,6 @@ import Gio from "gi://Gio?version=2.0";
 export interface EditorInputs {
   templateRoot: string;
   iconsYaml: string;
-  colorScheme: string;
-  /**
-   * Non-null when the runtime palette is missing: previews built on
-   * colorScheme will fail downstream, so the UI must show this instead of
-   * silently falling back to the orphaned generated/ seed (Epic 4 removed
-   * that tree — the runtime is the sole palette producer).
-   */
-  colorSchemeWarning: string | null;
 }
 
 const MANIFEST_PROBE =
@@ -34,28 +26,6 @@ const MANIFEST_PROBE =
 
 function spineHome(): string {
   return `${GLib.get_user_data_dir()}/dotfiles`;
-}
-
-/**
- * Color-scheme resolution: the runtime-owned current palette, no fallback.
- *
- * The runtime reconciler repoints <state>/dotfiles/current/colors.yaml on
- * every wallpaper set (via the color-scheme generator), and the whole
- * desktop consumes that pointer — so the editor previews against the LIVE
- * scheme. There is deliberately no generated/ fallback: Epic 4 removed that
- * tree and the runtime is its sole producer. When the pointer is missing
- * (runtime never ran), callers get the path anyway plus a warning carrying
- * the recovery command; downstream itr failures then surface next to it.
- */
-const MISSING_SCHEME_HINT =
-  "Runtime palette not found — run `dotfiles-runtime wallpaper set <wallpaper>` or re-bootstrap; previews are unavailable until it exists.";
-
-function resolveColorScheme(): { path: string; warning: string | null } {
-  const override = GLib.getenv("ICME_COLOR_SCHEME");
-  if (override) return { path: override, warning: null };
-  const current = `${GLib.get_user_state_dir()}/dotfiles/current/colors.yaml`;
-  if (GLib.file_test(current, GLib.FileTest.EXISTS)) return { path: current, warning: null };
-  return { path: current, warning: MISSING_SCHEME_HINT };
 }
 
 /** True when a path lives under the install spine (not a repo checkout). */
@@ -85,7 +55,6 @@ function findRepoRoot(): string | null {
 
 export function resolveInputs(): EditorInputs {
   const repoRoot = findRepoRoot();
-  const scheme = resolveColorScheme();
   if (repoRoot) {
     return {
       templateRoot:
@@ -93,15 +62,11 @@ export function resolveInputs(): EditorInputs {
       iconsYaml:
         GLib.getenv("ICME_ICONS_YAML") ??
         `${repoRoot}/${MANIFEST_PROBE}`,
-      colorScheme: scheme.path,
-      colorSchemeWarning: scheme.warning,
     };
   }
   return {
     templateRoot: GLib.getenv("ICME_TEMPLATE_ROOT") ?? `${spineHome()}/icon-templates`,
     iconsYaml: GLib.getenv("ICME_ICONS_YAML") ?? `${spineHome()}/icon-mappings/icons.yaml`,
-    colorScheme: scheme.path,
-    colorSchemeWarning: scheme.warning,
   };
 }
 
@@ -124,19 +89,4 @@ export function mtimeOf(path: string): number | null {
   }
 }
 
-/**
- * Change fingerprint for the color-scheme pointer: symlink target + mtime.
- * The runtime repoints current/colors.yaml on every wallpaper set — often at
- * a cached entry whose mtime predates the switch — so mtime alone misses
- * repoints back to an older scheme. Null when unreadable.
- */
-export function schemeFingerprint(colorSchemePath: string): string | null {
-  try {
-    const target = GLib.file_read_link(colorSchemePath) ?? colorSchemePath;
-    const mtime = mtimeOf(colorSchemePath);
-    if (mtime === null) return null;
-    return `${target}@${mtime}`;
-  } catch {
-    return null;
-  }
-}
+

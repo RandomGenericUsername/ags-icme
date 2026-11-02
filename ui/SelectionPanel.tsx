@@ -2,6 +2,7 @@ import { Gtk } from "ags/gtk4";
 import { createEffect, createState, type Accessor } from "ags";
 import type { MappingShow } from "../lib/itr";
 import type { ShapeSelection } from "../lib/model";
+import { ROLE_TOKENS, type RoleMap } from "../lib/palette";
 import { extractShapes, usageCount } from "../lib/svg";
 import {
   isValidPlaceholderName,
@@ -16,6 +17,7 @@ export interface CurrentToken {
 
 export interface SelectionPanelProps {
   show: Accessor<MappingShow | null>;
+  palette: Accessor<RoleMap>;
   groupName: Accessor<string>;
   activeVariant: Accessor<string>;
   selection: Accessor<ShapeSelection | null>;
@@ -175,11 +177,7 @@ export function SelectionPanel(props: SelectionPanelProps) {
   }
 
   function defaultToken(): string {
-    const palette = props.show()?.palette ?? {};
-    const keys = Object.keys(palette)
-      .filter((k) => /^color\d+$/.test(k))
-      .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)));
-    return keys[0] ?? "color1";
+    return ROLE_TOKENS.includes("on_surface") ? "on_surface" : ROLE_TOKENS[0] ?? "on_surface";
   }
 
   function assign(): void {
@@ -240,7 +238,7 @@ export function SelectionPanel(props: SelectionPanelProps) {
   const MINI_COLUMNS = 8;
   const miniCells = new Map<string, Gtk.Button>();
 
-  function rebuildMini(palette: Record<string, string>): void {
+  function rebuildMini(palette: RoleMap): void {
     let child = mini.get_first_child();
     while (child) {
       const next = child.get_next_sibling();
@@ -248,10 +246,8 @@ export function SelectionPanel(props: SelectionPanelProps) {
       child = next;
     }
     miniCells.clear();
-    const indexed = Object.keys(palette)
-      .filter((k) => /^color\d+$/.test(k) && isColorValue(palette[k]))
-      .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)));
-    indexed.forEach((token, i) => {
+    const roles = ROLE_TOKENS.filter((role) => isColorValue(palette[role]));
+    roles.forEach((token, i) => {
       const button = new Gtk.Button({
         css_classes: ["cell"],
         tooltip_text: `${token} ${palette[token]}`,
@@ -297,7 +293,7 @@ export function SelectionPanel(props: SelectionPanelProps) {
   }
 
   function hexOfToken(token: string): string | null {
-    const palette = props.show()?.palette ?? {};
+    const palette = props.palette();
     return token.startsWith("#") ? token : (palette[token] ?? null);
   }
 
@@ -391,8 +387,7 @@ export function SelectionPanel(props: SelectionPanelProps) {
   }
 
   createEffect(() => {
-    const palette = props.show()?.palette;
-    if (palette) rebuildMini(palette);
+    rebuildMini(props.palette());
   });
 
   createEffect(() => {

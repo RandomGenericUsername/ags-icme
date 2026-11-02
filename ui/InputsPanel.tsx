@@ -77,15 +77,6 @@ export function InputsPanel(props: InputsPanelProps) {
       put: (inputs, path) => ({ ...inputs, iconsYaml: path }),
       dirOnly: false,
     },
-    {
-      label: "Color scheme (read-only)",
-      row: new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL }),
-      path: new Gtk.Label({ css_classes: ["path"], xalign: 0 }),
-      pick: new Gtk.Button({ label: "⋯", css_classes: ["pick"] }),
-      get: (inputs) => inputs.colorScheme,
-      put: (inputs, path) => ({ ...inputs, colorScheme: path }),
-      dirOnly: false,
-    },
   ];
 
   for (const item of rows) {
@@ -119,16 +110,9 @@ export function InputsPanel(props: InputsPanelProps) {
     wrap: true,
     max_width_chars: 30,
   });
-  const schemeWarn = new Gtk.Label({
-    css_classes: ["input-warn"],
-    xalign: 0,
-    wrap: true,
-    max_width_chars: 30,
-  });
   const reset = new Gtk.Button({ label: "Reset to checkout defaults", css_classes: ["btn"] });
   reset.connect("clicked", () => props.onReset());
   root.append(warn);
-  root.append(schemeWarn);
   root.append(reset);
 
   createEffect(() => {
@@ -146,8 +130,7 @@ export function InputsPanel(props: InputsPanelProps) {
     const d = props.defaults;
     const custom =
       inputs.templateRoot !== d.templateRoot ||
-      inputs.iconsYaml !== d.iconsYaml ||
-      inputs.colorScheme !== d.colorScheme;
+      inputs.iconsYaml !== d.iconsYaml;
     const split =
       isSpinePath(inputs.templateRoot) !== isSpinePath(inputs.iconsYaml);
     warn.set_visible(custom);
@@ -163,9 +146,6 @@ export function InputsPanel(props: InputsPanelProps) {
         ? "Save or Revert pending changes before resetting inputs"
         : "Restore the checkout defaults",
     );
-    const schemeWarning = inputs.colorSchemeWarning;
-    schemeWarn.set_visible(schemeWarning !== null);
-    if (schemeWarning !== null) schemeWarn.set_label(schemeWarning);
   });
 
   return root;

@@ -10,6 +10,7 @@ import type {
 } from "../lib/itr";
 import type { PendingEdit, ShapeSelection, VocabularyPendingEdit } from "../lib/model";
 import { previewMappings } from "../lib/model";
+import type { RoleMap } from "../lib/palette";
 import { substitute } from "../lib/substitute";
 import {
   extractShapes,
@@ -68,6 +69,7 @@ function hasVariantOverride(
 
 export interface PreviewProps {
   show: Accessor<MappingShow | null>;
+  palette: Accessor<RoleMap>;
   groupName: Accessor<string>;
   activeVariant: Accessor<string>;
   pending: Accessor<ReadonlyMap<string, PendingEdit>>;
@@ -127,7 +129,7 @@ export function Preview(props: PreviewProps) {
 
   function renderVariant(
     group: GroupMappingView,
-    show: MappingShow,
+    palette: RoleMap,
     view: VariantMappingView,
     isActive: boolean,
   ): VariantRender {
@@ -150,7 +152,7 @@ export function Preview(props: PreviewProps) {
       }
     }
 
-    let svg = withHatchDefs(substitute(body, mappings, show.palette));
+    let svg = withHatchDefs(substitute(body, mappings, palette));
     if (isActive) {
       const selection = props.selection();
       const hovered = hover();
@@ -398,7 +400,7 @@ export function Preview(props: PreviewProps) {
     groupToggle.set_css_classes(props.showGroup() ? ["toggle", "on"] : ["toggle"]);
     backdropToggle.set_css_classes(props.barBackground() ? ["toggle", "on"] : ["toggle"]);
     if (props.barBackground()) {
-      const barBg = show.palette["background"] ?? "#16181d";
+      const barBg = props.palette()["background"] ?? "#16181d";
       backdropProvider.load_from_string(`.canvas.bar-bg { background-color: ${barBg}; }`);
       if (!canvas.get_css_classes().includes("bar-bg")) {
         canvas.set_css_classes([...canvas.get_css_classes(), "bar-bg"]);
@@ -418,6 +420,7 @@ export function Preview(props: PreviewProps) {
     props.vocabPending();
     props.templatePending?.();
     props.newPlaceholders?.();
+    props.palette();
     props.selection();
     hover();
     const active = props.activeVariant();
@@ -425,7 +428,7 @@ export function Preview(props: PreviewProps) {
     dropMissingCards(variants);
     for (const view of variants) {
       const isActive = view.variant === active;
-      const rendered = renderVariant(group, show, view, isActive);
+      const rendered = renderVariant(group, props.palette(), view, isActive);
       const widgets = ensureCard(view);
       widgets.picture.set_paintable(rendered.texture);
       widgets.picture.set_size_request(CARD_SIZE, CARD_SIZE);

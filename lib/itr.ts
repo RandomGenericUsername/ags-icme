@@ -107,14 +107,12 @@ export interface ShowArgs {
   iconsYaml: string;
   icon?: string;
   templateDir?: string;
-  colorScheme?: string;
 }
 
 export function mappingShow(args: ShowArgs): Promise<MappingShow> {
   const argv = ["mapping", "show", args.iconsYaml];
   if (args.icon !== undefined) argv.push("--icon", args.icon);
   if (args.templateDir !== undefined) argv.push("--template-dir", args.templateDir);
-  if (args.colorScheme !== undefined) argv.push("--color-scheme", args.colorScheme);
   return runJson<MappingShow>(argv);
 }
 
@@ -125,7 +123,6 @@ export interface SetArgs {
   dryRun?: boolean;
   withDiff?: boolean;
   templateDir?: string;
-  colorScheme?: string;
 }
 
 function setArgv(command: "set" | "set-default", target: string, args: SetArgs): string[] {
@@ -134,7 +131,6 @@ function setArgv(command: "set" | "set-default", target: string, args: SetArgs):
   if (args.dryRun === true) argv.push("--dry-run");
   if (args.withDiff === true) argv.push("--diff");
   if (args.templateDir !== undefined) argv.push("--template-dir", args.templateDir);
-  if (args.colorScheme !== undefined) argv.push("--color-scheme", args.colorScheme);
   return argv;
 }
 

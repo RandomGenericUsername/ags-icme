@@ -10,7 +10,7 @@ palette swatch → save. The repo root **is** the app package.
 | App id | `icme` |
 | AGS instance | `icon-color-mapping-editor` |
 | Config dir | `ags-icme` |
-| Window | `icme-window` |
+| Window | `icon-color-mapping-editor-window` |
 | Launcher | `icon-color-mapping-editor` |
 | Keybind description | Open icon color mapping editor (SUPER+I) |
 | Manifest mode | `live` (`holdsUnsavedState: true`) |
@@ -39,7 +39,10 @@ This app depends on `ags-platform`, `contracts` (generated binding) and
   `Emit` method name from the shared client (`lib/icme-saved.ts` is the pure
   shape; `lib/icme-saved-gio.ts` is the Gio seam).
 - **Theming** — the generated palette is applied through the `Theme` port
-  (`ags-platform/adapters/theme`, AD-13).
+  (`ags-platform/adapters/theme`, AD-13). The same provider supplies the
+  `palette.v1` role/hex map: `theme.palette()` for the token list and previews,
+  `theme.subscribe()` for live change notification. ICME never reads
+  `colors.yaml` directly.
 - **Icons** — this app has no `icon-registry.ts` copy: it renders icon
   templates from disk through `itr`, so the platform `IconProvider` does not
   apply.
@@ -52,8 +55,10 @@ checkout is detectable — via `ICME_REPO_ROOT` (set by the provisioned launcher
 or a working-directory ancestor walk — and bootstrap converges the manifest into
 the spine on every run. On machines without a checkout it edits the spine copy
 (`~/.local/share/dotfiles/icon-mappings/`) instead. `ICME_ICONS_YAML`,
-`ICME_TEMPLATE_ROOT`, `ICME_REPO_ROOT` and `ICME_COLOR_SCHEME` override the
-resolution. The editor never touches `generated/` or runs `itr render`;
+`ICME_TEMPLATE_ROOT` and `ICME_REPO_ROOT` override the resolution. The color
+scheme itself is never a path input: ITR resolves it from its own settings and
+the editor reads roles from the platform Theme provider. The editor never
+touches `generated/` or runs `itr render`;
 rendered icons refresh on the next wallpaper/theme run as usual.
 
 ## Live palette refresh
@@ -67,11 +72,14 @@ ags request palette-refresh <appearance-hash> -i icon-color-mapping-editor
 ```
 
 `app.tsx` registers the platform's `createPaletteRefreshHandler` around
-`refreshEditorPalette()` from `ui/EditorWindow.tsx`. The refresh:
+`refreshEditorPalette()` from `ui/EditorWindow.tsx`. The editor also subscribes
+through `theme.subscribe()`; the platform adapter applies the composed CSS and
+then notifies, so the chrome and token list follow a palette change without a
+restart. The direct request path:
 
 1. returns `deferred` while a save is in progress and `busy` while another show
    refresh is in flight (never a concurrent rebuild);
-2. compares the color-scheme fingerprint; an unchanged fingerprint is a no-op
+2. compares the provider role/hex fingerprint; an unchanged palette is a no-op
    that still reports `applied`;
 3. otherwise reloads the show (`mappingShow`) and swaps it in;
 4. re-applies the stable Theme pointer (`$XDG_CONFIG_HOME/ags/colors.css`)
@@ -99,12 +107,12 @@ retargets `defaults.yaml` and names the groups shadowing the placeholder.
 
 ## Local development
 
-The program tuple is `ags-platform` / `contracts` / `dotfiles-assets`
-`v0.3.0`. Those tags are local-only in this run; the local gates use a
-gitignored symlink under `.dev/`.
+The program tuple is `ags-platform` `v0.4.0` (palette.v1 provider) /
+`contracts` / `dotfiles-assets` `v0.3.0`. Those tags are local-only in this
+run; the local gates use a gitignored symlink under `.dev/`.
 
 ```sh
-ln -s ../../../ags-platform .dev/ags-platform/v0.3.0   # or use AGS_PLATFORM_DEV
+ln -s ../../../ags-platform .dev/ags-platform/v0.4.0   # or use AGS_PLATFORM_DEV
 make test          # pure unit tests (Node only)
 make conformance   # manifest + handler + template gate
 make drift         # shared event client <-> contracts drift gate

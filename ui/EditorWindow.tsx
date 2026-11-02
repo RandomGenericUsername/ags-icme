@@ -2,6 +2,7 @@ import { Astal, Gdk, Gtk } from "ags/gtk4";
 import app from "ags/gtk4/app";
 import GLib from "gi://GLib?version=2.0";
 import { createEffect, createState } from "ags";
+import { theme } from "ags-platform/adapters/theme";
 import type { PaletteRefreshResult } from "ags-platform/ports/palette-refresh";
 import {
   manifestRegister,
@@ -15,9 +16,13 @@ import {
   defaultsPathFor,
   mtimeOf,
   resolveInputs,
-  schemeFingerprint,
   type EditorInputs,
 } from "../lib/inputs";
+import {
+  paletteFingerprint,
+  resolveTokenHex,
+  type RoleMap,
+} from "../lib/palette";
 // The ONE shared event client (spine AD-5): the app-local `lib/event-bus*.ts`
 // copies are gone. The editor publishes `icme.saved` through the generated
 // binding; palette changes arrive through the runtime `palette-refresh`
@@ -40,6 +45,27 @@ import { ScopeSwitch } from "./ScopeSwitch";
 import { SelectionPanel, type CurrentToken } from "./SelectionPanel";
 import { TokenPicker } from "./TokenPicker";
 
+/**
+ * The manifest-instance convention: the window is `<instance>-window`, the
+ * same spelling the provisioned launcher probes first. The source, CSS and
+ * conformance gate all use this one constant so a lookup can never drift from
+ * the registered name again.
+ */
+export const WINDOW_NAME = "icon-color-mapping-editor-window";
+
+/**
+ * The provider's current role map. `theme.palette()` fails closed when the
+ * runtime artifact is missing/malformed; an empty map keeps the editor usable
+ * (previews show the unresolved hatch) without falling back to a direct read.
+ */
+function providerRoles(): RoleMap {
+  try {
+    return theme.palette().roles;
+  } catch {
+    return {};
+  }
+}
+
 // Shell window hosting the editor. Owns session state, pending edits, and the
 // save pipeline. One centered overlay window on the given monitor (same
 // layer-shell pattern as the capture dialog).
@@ -58,6 +84,9 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
   const [show, setShow] = createState<MappingShow | null>(null);
   const [loadError, setLoadError] = createState<string | null>(null);
   const [inputs, setInputs] = createState<EditorInputs>(resolveInputs());
+  // The typed role map is the provider's, not a snapshot parsed from the
+  // show. The platform adapter owns which artifact is current.
+  const [palette, setPalette] = createState<RoleMap>(providerRoles());
   const [groupName, setGroupName] = createState("");
   const [activeVariant, setActiveVariant] = createState("");
   const [selection, setSelection] = createState<ShapeSelection | null>(null);
@@ -100,7 +129,6 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
     const loaded = await mappingShow({
       iconsYaml: next.iconsYaml,
       templateDir: next.templateRoot,
-      colorScheme: next.colorScheme,
     });
     setShow(loaded);
     setLoadError(null);
@@ -114,9 +142,9 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
     }
   }
 
-  // Live-palette baseline, declared before load() so input switches can
-  // re-anchor it (avoids one spurious refresh after every manual switch).
-  let schemeFp: string | null = null;
+  // Provider-palette baseline: the role/hex fingerprint, not a file path. An
+  // unchanged palette is a no-op; an additive role change still counts.
+  let paletteFp = paletteFingerprint(palette());
   let schemeRefreshing = false;
 
   function load(next: EditorInputs): void {
@@ -132,7 +160,6 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
     templateMtimes.clear();
     setSaveError(null);
     setStale(false);
-    schemeFp = schemeFingerprint(next.colorScheme);
     refreshShow().catch((error: unknown) => setLoadError(String(error)));
   }
 
@@ -165,27 +192,26 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
 
   load(resolveInputs());
 
-  // Follow the runtime palette on every invocation: the show (and every
-  // token grid built from it) is a snapshot, so a wallpaper switch made
-  // while the editor was hidden left stale colors on the next SUPER+I
-  // toggle. The window's `map` handler (below) re-checks the scheme
-  // fingerprint on each show and rebuilds the show when it moved — no
-  // background polling. Pending edits are preserved (refreshShow only
-  // swaps the loaded show, never the staging maps). The runtime
-  // `palette-refresh` command uses the same refreshShow path below.
+  // Follow the provider palette on every invocation: the window's `map`
+  // handler (below) re-reads the role map (the source of truth), so a
+  // wallpaper switch made while the editor was hidden cannot leave stale
+  // colors on the next SUPER+I toggle. No background polling. Pending edits
+  // are preserved: only the palette accessor changes here.
 
   // Runtime palette refresh (AD-27). The editor no longer follows
-  // `wallpaper.state` for palette; that event is progress/status only. A save
-  // or an in-flight show refresh gets `deferred`/`busy` instead of racing, and
-  // pending edits stay staged because refreshShow never touches the maps.
+  // `wallpaper.state` for palette; that event is progress/status only. The
+  // provider subscription below is the primary update path; this handler keeps
+  // the protocol's deferred/busy contract for the runtime's direct trigger.
   async function refreshEditorPaletteNow(): Promise<PaletteRefreshResult> {
     if (saving()) return { status: "deferred", reason: "a save is in progress" };
     if (schemeRefreshing) return { status: "busy" };
     try {
-      const fp = schemeFingerprint(inputs().colorScheme);
-      if (fp === schemeFp) return { status: "applied" };
-      schemeFp = fp;
+      const roles = providerRoles();
+      const fp = paletteFingerprint(roles);
+      if (fp === paletteFp) return { status: "applied" };
+      paletteFp = fp;
       schemeRefreshing = true;
+      setPalette(roles);
       await refreshShow();
       return { status: "applied" };
     } finally {
@@ -194,6 +220,15 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
   }
 
   refreshPalette = refreshEditorPaletteNow;
+
+  // Provider change notification: the adapter has already reloaded + applied
+  // the composed CSS, so the chrome is current before this runs. Updating the
+  // role map repaints every token swatch and preview without a shell-out or a
+  // restart. The listener never touches the staging maps or the selection.
+  theme.subscribe((next) => {
+    paletteFp = paletteFingerprint(next.roles);
+    setPalette(next.roles);
+  });
 
   function pick(token: string): void {
     const sel = selection();
@@ -253,7 +288,6 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
         await mappingSetDefault({
           defaultsYaml: defaultsPathFor(next.iconsYaml),
           manifestYaml: next.iconsYaml,
-          colorScheme: next.colorScheme,
           placeholder: name,
           token,
         });
@@ -272,7 +306,6 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
       for (const edit of pending().values()) {
         await mappingSet({
           iconsYaml: next.iconsYaml,
-          colorScheme: next.colorScheme,
           group: edit.group,
           placeholder: edit.placeholder,
           token: edit.token,
@@ -283,7 +316,6 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
         await mappingSetDefault({
           defaultsYaml: defaultsPathFor(next.iconsYaml),
           manifestYaml: next.iconsYaml,
-          colorScheme: next.colorScheme,
           placeholder: edit.placeholder,
           token: edit.token,
         });
@@ -352,8 +384,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
     // New placeholder staged this session: resolve from vocabulary defaults map.
     const newToken = newPlaceholders().get(sel.placeholder);
     if (newToken !== undefined) {
-      const hex = newToken.startsWith("#") ? newToken : (loaded.palette[newToken] ?? null);
-      setCurrentToken({ token: newToken, hex });
+      setCurrentToken({ token: newToken, hex: resolveTokenHex(newToken, palette()) });
       return;
     }
     const token = resolveToken(
@@ -374,7 +405,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
     }
     setCurrentToken({
       token,
-      hex: token.startsWith("#") ? token : (loaded.palette[token] ?? null),
+      hex: resolveTokenHex(token, palette()),
     });
   });
 
@@ -413,7 +444,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
       // Native file choosers are regular windows and always render below a
       // layer-shell OVERLAY surface — hide the editor while one is open.
       onDialogOpenChange: (open) => {
-        const win = app.get_window("icme-window");
+        const win = app.get_window(WINDOW_NAME);
         if (!win) return;
         if (open) win.show();
         else win.hide();
@@ -460,6 +491,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
   rightInner.append(
     SelectionPanel({
       show,
+      palette,
       groupName,
       activeVariant,
       selection,
@@ -488,8 +520,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
   );
   mappingWidgets.append(
     TokenPicker({
-      palette: () => show()?.palette ?? {},
-      missingTokens: () => show()?.missing_tokens ?? [],
+      palette,
       placeholder: () => selection()?.placeholder ?? null,
       currentToken: () => currentToken()?.token ?? null,
       onPick: pick,
@@ -572,8 +603,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
   return (
     <window
       visible
-      name="icme-window"
-      class="icme-window"
+      name={WINDOW_NAME}
       title="Icon Color Mapping Editor"
       gdkmonitor={gdkmonitor}
       anchor={Astal.WindowAnchor.NONE}
@@ -594,28 +624,24 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
           return false;
         });
         self.add_controller(keys);
-        // Every invocation (SUPER+I toggle -> show -> map): re-check the
-        // runtime scheme fingerprint and rebuild the show when the palette
-        // moved. First map after load() is a fingerprint no-op.
+        // Every invocation (SUPER+I toggle -> show -> map): re-read the
+        // provider role map so a palette switch made while hidden is applied
+        // before the first frame. First map after load() is a no-op.
         self.connect("map", () => {
-          if (saving() || schemeRefreshing) return;
           try {
-            const fp = schemeFingerprint(inputs().colorScheme);
-            if (fp === schemeFp) return;
-            schemeFp = fp;
-            schemeRefreshing = true;
-            refreshShow()
-              .catch((error: unknown) => setLoadError(String(error)))
-              .finally(() => {
-                schemeRefreshing = false;
-              });
+            const roles = providerRoles();
+            const fp = paletteFingerprint(roles);
+            if (fp === paletteFp) return;
+            paletteFp = fp;
+            setPalette(roles);
           } catch {
-            // A failed fingerprint check must never break the window show.
+            // A failed palette read must never break the window show.
           }
         });
         center.append(
           Preview({
             show,
+            palette,
             groupName,
             activeVariant,
             pending,
