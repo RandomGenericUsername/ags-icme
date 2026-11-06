@@ -5,8 +5,14 @@ import style from "./style.css";
 // artifact is applied — the stable `colors.css` pointer, repointed on every
 // palette change — so this app no longer carries its own theme.ts copy.
 import { theme } from "ags-platform/adapters/theme";
+import { createAppSkin } from "ags-platform/adapters/skin";
 import { createPaletteRefreshHandler } from "ags-platform/ports/palette-refresh";
 import { EditorWindow, refreshEditorPalette } from "./ui/EditorWindow";
+
+// The runtime-expanded skin for this app's config dir. `style.css` stays the
+// bundled glass fallback; the adapter's monitor reloads skin.css on change, so
+// no request handler is needed for the skin plane.
+const skin = createAppSkin({ configDir: "ags-icme" });
 
 /**
  * Register one top-level window with the application.
@@ -36,6 +42,7 @@ app.start({
   }),
   main() {
     theme.apply();
+    skin.apply();
     // Single centered window on the primary monitor (dev tool, not chrome).
     const monitor = app.get_monitors()[0];
     if (monitor) addWindow(EditorWindow(monitor));

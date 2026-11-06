@@ -43,6 +43,14 @@ This app depends on `ags-platform`, `contracts` (generated binding) and
   `palette.v1` role/hex map: `theme.palette()` for the token list and previews,
   `theme.subscribe()` for live change notification. ICME never reads
   `colors.yaml` directly.
+- **Skin** — the runtime skin plane is applied through the app-scoped Skin
+  adapter (`ags-platform/adapters/skin`) with
+  `createAppSkin({ configDir: "ags-icme" })`. It reads
+  `$XDG_CONFIG_HOME/ags-icme/skin.css`, composed over the shared palette and
+  token map. `app.tsx` calls `skin.apply()` immediately after `theme.apply()`.
+  `style.css` stays the bundled glass fallback when the skin artifacts are
+  absent; the adapter's monitor reloads `skin.css`, so no skin request handler
+  is registered. Layout tokens are TSX-owned.
 - **Icons** — this app has no `icon-registry.ts` copy: it renders icon
   templates from disk through `itr`, so the platform `IconProvider` does not
   apply.
@@ -107,12 +115,13 @@ retargets `defaults.yaml` and names the groups shadowing the placeholder.
 
 ## Local development
 
-The program tuple is `ags-platform` `v0.4.0` (palette.v1 provider) /
-`contracts` / `dotfiles-assets` `v0.3.0`. Those tags are local-only in this
-run; the local gates use a gitignored symlink under `.dev/`.
+The program tuple is `ags-platform` `v0.8.0` (palette.v1 provider + app-scoped
+Skin) / `contracts` `v0.6.0` (skin token vocabulary) / `dotfiles-assets`. Those
+tags are local-only in this run; the local gates use a gitignored symlink under
+`.dev/`.
 
 ```sh
-ln -s ../../../ags-platform .dev/ags-platform/v0.4.0   # or use AGS_PLATFORM_DEV
+ln -s ../../../ags-platform .dev/ags-platform/v0.8.0   # or use AGS_PLATFORM_DEV
 make test          # pure unit tests (Node only)
 make conformance   # manifest + handler + template gate
 make drift         # shared event client <-> contracts drift gate

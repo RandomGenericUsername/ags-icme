@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased — BUG-001 / REQ-003
+## Unreleased — REQ-004
+
+- Consume the ags-platform v0.8.0 app-scoped Skin plane:
+  `createAppSkin({ configDir: "ags-icme" })` is applied immediately after
+  `theme.apply()` in `main()`, reading
+  `$XDG_CONFIG_HOME/ags-icme/skin.css` composed over the shared palette and
+  token map. `style.css` stays the bundled glass fallback; the adapter monitor
+  reloads the skin, so the existing pending-preserving `palette-refresh`
+  handler and all structure/behavior are unchanged.
+- Pin the local tuple to `ags-platform` v0.8.0 / `contracts` v0.6.0.
+
+## v0.2.0 — 2026-11-01
 
 - Standardize the window name on the manifest-instance convention:
   `icon-color-mapping-editor-window` (registered, looked up in `app.get_window`
