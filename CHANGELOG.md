@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — REQ-004
+## v0.3.0 — 2026-11-05
 
 - Consume the ags-platform v0.8.0 app-scoped Skin plane:
   `createAppSkin({ configDir: "ags-icme" })` is applied immediately after
