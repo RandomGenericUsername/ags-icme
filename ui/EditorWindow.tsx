@@ -82,11 +82,12 @@ export function refreshEditorPalette(): Promise<PaletteRefreshResult> {
 }
 
 export function EditorWindow(gdkmonitor: Gdk.Monitor, appearance: Appearance) {
-  // Layout metrics are TSX-owned v2 tokens. The fallbacks match the bundled
-  // `style.css` glass values, so a missing appearance generation keeps the
-  // window usable; `peek()` supplies the plain numbers the window props need.
-  const rootWidth = appearance.value("layout.ags-icme.root-width", 960);
-  const rootHeight = appearance.value("layout.ags-icme.root-height", 600);
+  // Layout metrics are TSX-owned v2 tokens. The fallbacks keep the pre-v2
+  // `1280x800` default so a missing appearance generation behaves as before;
+  // the corrected assets manifest carries the same size. `peek()` supplies the
+  // plain numbers the window props need.
+  const rootWidth = appearance.value("layout.ags-icme.root-width", 1280);
+  const rootHeight = appearance.value("layout.ags-icme.root-height", 800);
 
   const [show, setShow] = createState<MappingShow | null>(null);
   const [loadError, setLoadError] = createState<string | null>(null);

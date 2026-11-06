@@ -300,13 +300,13 @@ test("the window size comes from the ags-icme layout tokens", () => {
   const window = readText("ui", "EditorWindow.tsx");
   assert.match(
     window,
-    /appearance\.value\("layout\.ags-icme\.root-width", 960\)/,
-    "the root width token keeps its 960 fallback",
+    /appearance\.value\("layout\.ags-icme\.root-width", 1280\)/,
+    "the root width token keeps the pre-v2 1280 fallback",
   );
   assert.match(
     window,
-    /appearance\.value\("layout\.ags-icme\.root-height", 600\)/,
-    "the root height token keeps its 600 fallback",
+    /appearance\.value\("layout\.ags-icme\.root-height", 800\)/,
+    "the root height token keeps the pre-v2 800 fallback",
   );
   assert.match(window, /default_width=\{rootWidth\.peek\(\)\}/);
   assert.match(window, /default_height=\{rootHeight\.peek\(\)\}/);

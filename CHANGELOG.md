@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.1 — 2026-11-06
+
+- Restore the `ui/EditorWindow.tsx` default-size fallbacks to the pre-v2
+  `1280x800`. The `layout.ags-icme.root-width` / `root-height` tokens are still
+  read, and the corrected `dotfiles-assets` v0.12.2 manifest supplies the same
+  `1280x800`; a missing appearance generation no longer shrinks the window to
+  the `960x600` CSS minimums. No other behavior, class or structure changed.
+
 ## v0.4.0 — 2026-11-06
 
 - Consume the ags-platform v0.9.0 unified Appearance plane
