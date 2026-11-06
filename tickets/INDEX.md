@@ -13,7 +13,7 @@
 - [REQ-003-theme-roles/ticket.md](./REQ-003-theme-roles/ticket.md) — Migrate ICME chrome and token list to palette.v1 roles | `done` | links: worktree .worktrees/BUG-001/, branch ticket/BUG-001-window-identity-stale-palette
 - [REQ-004-skin-consumption/ticket.md](./REQ-004-skin-consumption/ticket.md) — Consume the ags-platform skin plane | `done` | links: worktree .worktrees/REQ-004/, branch ticket/REQ-004-skin-consumption
 - [REQ-005-appearance-migration/ticket.md](./REQ-005-appearance-migration/ticket.md) — Migrate ICME to the v2 Appearance plane | `done` | links: worktree .worktrees/REQ-005/, branch ticket/REQ-005-appearance-migration
-- [REQ-006-layout-default-size/ticket.md](./REQ-006-layout-default-size/ticket.md) — Restore the pre-v2 window default size fallback | `in-progress` | links: worktree .worktrees/REQ-006/, branch ticket/REQ-006-layout-default-size
+- [REQ-006-layout-default-size/ticket.md](./REQ-006-layout-default-size/ticket.md) — Restore the pre-v2 window default size fallback | `done` | links: worktree .worktrees/REQ-006/, branch ticket/REQ-006-layout-default-size
 
 ## Bugs
 
