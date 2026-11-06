@@ -61,7 +61,7 @@ no self-hosted runner and no CI secret dependency.
 - `make bundle` — LOCAL: `ags bundle app.tsx build/ags-icme.js`.
 - `make gates` — all of the above.
 
-The program tuple is `ags-platform` v0.8.0 / `contracts` v0.6.0 /
+The program tuple is `ags-platform` v0.9.0 / `contracts` v0.7.0 /
 `dotfiles-assets`, local-only in this run. `.dev/` is gitignored; never commit a
 fetched platform, `node_modules/`, `@girs/`, generated `tsconfig.json` or
 bundle output.
@@ -75,20 +75,23 @@ the release ticket.
 
 ## 6. Palette-refresh invariants
 
-The editor consumes the platform Theme provider (`theme.palette()` for the
-`palette.v1` role/hex map and `theme.subscribe()` for change notification); it
-never reads `colors.yaml` itself. The runtime `palette-refresh` handler is
-registered in `app.tsx` through the platform's
-`createPaletteRefreshHandler` and calls `refreshEditorPalette()` from
-`ui/EditorWindow.tsx`. It is pending-preserving by construction:
+The editor consumes the platform Appearance consumer for the composed palette,
+skin and mode sheet, and the Theme provider (`theme.palette()` for the
+`palette.v1` role/hex map and `theme.subscribe()` for change notification) for
+its roles; it never reads `colors.yaml` itself. The runtime `palette-refresh`
+handler is registered in `app.tsx` through the platform's
+`createAppearanceRefreshHandler(appearance, work)` and calls
+`refreshEditorPalette()` from `ui/EditorWindow.tsx`. It is pending-preserving by
+construction:
 
 - exactly one JSON-string response per request, through the platform helper;
+- the whole appearance is re-applied on every request before the editor work;
 - `deferred` while a save is in progress, `busy` while a show refresh is in
   flight — never a concurrent rebuild;
 - `refreshShow()` swaps the loaded show only; the staging maps (`pending`,
   `vocabPending`, `templatePending`, `newPlaceholders`, `manifestPendings`),
   selection and loaded inputs are never cleared by a refresh;
-- the Theme pointer is re-applied only when the refresh actually converges
+- the appearance hash advances only when the editor work converges
   (`status === "applied"`);
 - fingerprint-idempotent: an unchanged scheme fingerprint is a no-op that still
   reports `applied`.

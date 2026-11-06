@@ -1,12 +1,13 @@
 .PHONY: help platform-dev deps types test conformance drift ci bundle typecheck gates clean-tags
 
 # The program tuple this app builds/tests against (AD-31/AD-34). Platform
-# v0.8.0 is the app-scoped skin provider (`createAppSkin`) over the palette.v1
-# provider; contracts v0.6.0 is the skin token/manifest vocabulary. Both are
-# LOCAL-ONLY in this run: local gates symlink them from .dev/ (gitignored), CI
-# checks out the tags explicitly once published.
-AGS_PLATFORM_VERSION := v0.8.0
-CONTRACTS_VERSION := v0.6.0
+# v0.9.0 is the unified Appearance consumer (one composed palette + skin + mode
+# provider over the single `current/appearance` hop); contracts v0.7.0 is the
+# appearance token/manifest vocabulary. Both are LOCAL-ONLY in this run: local
+# gates symlink them from .dev/ (gitignored), CI checks out the tags explicitly
+# once published.
+AGS_PLATFORM_VERSION := v0.9.0
+CONTRACTS_VERSION := v0.7.0
 AGS_PLATFORM_REPO := https://github.com/RandomGenericUsername/ags-platform.git
 AGS_PLATFORM_DEV ?=
 PLATFORM_FETCH_DIR := $(CURDIR)/.dev/ags-platform/$(AGS_PLATFORM_VERSION)
@@ -28,7 +29,7 @@ help:
 	@echo "make gates        all local gates: test + conformance + drift + bundle + typecheck"
 	@echo ""
 	@echo "Local-only tuple: put a checkout/symlink at"
-	@echo "  .dev/ags-platform/v0.8.0  (or AGS_PLATFORM_DEV=/path/to/ags-platform)"
+	@echo "  .dev/ags-platform/v0.9.0  (or AGS_PLATFORM_DEV=/path/to/ags-platform)"
 	@echo "and a contracts checkout at ../contracts (or set CONTRACTS_ROOT)."
 
 # The platform shortcut. It MUST point outside node_modules: Node refuses to
@@ -99,7 +100,7 @@ conformance: platform-dev
 	CONTRACTS_ROOT="$(CONTRACTS_ROOT)" node --test tests/app-contract.test.mjs
 
 # Contract drift: the shared event client, the vendored generated binding and
-# the app's `icme.saved` publisher against the canonical contracts v0.6.0
+# the app's `icme.saved` publisher against the canonical contracts v0.7.0
 # checkout. Stock runner.
 drift: platform-dev
 	@command -v node >/dev/null || { echo "FAIL: drift: node is not on PATH" >&2; exit 1; }

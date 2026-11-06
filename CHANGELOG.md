@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.4.0 — 2026-11-06
+
+- Consume the ags-platform v0.9.0 unified Appearance plane
+  (contracts v0.7.0): one module-level
+  `createAppearance({ configDir: "ags-icme" })` is applied in `main()`,
+  installing the runtime-composed palette + skin + mode sheet from the single
+  `current/appearance` hop. The split `theme.apply()` / `skin.apply()` startup
+  pair is gone; `style.css` stays the bundled glass fallback.
+- Replace the palette-refresh wrapper with
+  `createAppearanceRefreshHandler(appearance, work)`. The platform re-applies
+  the whole appearance first and the app work preserves the editor's
+  `deferred`/`busy`/`applied` result, pending edits, selection and loaded
+  inputs. No new request command is added.
+- Read the window size from the TSX-owned layout tokens
+  `layout.ags-icme.root-width` (960) / `root-height` (600) instead of literals.
+- Pin the local tuple to `ags-platform` v0.9.0 / `contracts` v0.7.0.
+
 ## v0.3.0 — 2026-11-05
 
 - Consume the ags-platform v0.8.0 app-scoped Skin plane:

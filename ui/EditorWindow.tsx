@@ -3,6 +3,7 @@ import app from "ags/gtk4/app";
 import GLib from "gi://GLib?version=2.0";
 import { createEffect, createState } from "ags";
 import { theme } from "ags-platform/adapters/theme";
+import type { Appearance } from "ags-platform/ports/appearance";
 import type { PaletteRefreshResult } from "ags-platform/ports/palette-refresh";
 import {
   manifestRegister,
@@ -80,7 +81,13 @@ export function refreshEditorPalette(): Promise<PaletteRefreshResult> {
   return refreshPalette?.() ?? Promise.resolve({ status: "applied" });
 }
 
-export function EditorWindow(gdkmonitor: Gdk.Monitor) {
+export function EditorWindow(gdkmonitor: Gdk.Monitor, appearance: Appearance) {
+  // Layout metrics are TSX-owned v2 tokens. The fallbacks match the bundled
+  // `style.css` glass values, so a missing appearance generation keeps the
+  // window usable; `peek()` supplies the plain numbers the window props need.
+  const rootWidth = appearance.value("layout.ags-icme.root-width", 960);
+  const rootHeight = appearance.value("layout.ags-icme.root-height", 600);
+
   const [show, setShow] = createState<MappingShow | null>(null);
   const [loadError, setLoadError] = createState<string | null>(null);
   const [inputs, setInputs] = createState<EditorInputs>(resolveInputs());
@@ -609,8 +616,8 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor) {
       anchor={Astal.WindowAnchor.NONE}
       layer={Astal.Layer.OVERLAY}
       keymode={Astal.Keymode.ON_DEMAND}
-      default_width={1280}
-      default_height={800}
+      default_width={rootWidth.peek()}
+      default_height={rootHeight.peek()}
       $={(self) => {
         // ESC hides the window (the toggle-aware launcher brings it back).
         // Works while the window holds keyboard focus; keymode stays

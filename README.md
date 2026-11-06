@@ -38,19 +38,21 @@ This app depends on `ags-platform`, `contracts` (generated binding) and
   (`lib/generated/contract.ts`, pinned to the `contracts` artifact) and the
   `Emit` method name from the shared client (`lib/icme-saved.ts` is the pure
   shape; `lib/icme-saved-gio.ts` is the Gio seam).
-- **Theming** — the generated palette is applied through the `Theme` port
-  (`ags-platform/adapters/theme`, AD-13). The same provider supplies the
-  `palette.v1` role/hex map: `theme.palette()` for the token list and previews,
-  `theme.subscribe()` for live change notification. ICME never reads
-  `colors.yaml` directly.
-- **Skin** — the runtime skin plane is applied through the app-scoped Skin
-  adapter (`ags-platform/adapters/skin`) with
-  `createAppSkin({ configDir: "ags-icme" })`. It reads
-  `$XDG_CONFIG_HOME/ags-icme/skin.css`, composed over the shared palette and
-  token map. `app.tsx` calls `skin.apply()` immediately after `theme.apply()`.
-  `style.css` stays the bundled glass fallback when the skin artifacts are
-  absent; the adapter's monitor reloads `skin.css`, so no skin request handler
-  is registered. Layout tokens are TSX-owned.
+- **Theming** — the `palette.v1` role/hex map comes from the `Theme` provider
+  (`ags-platform/adapters/theme`, AD-13): `theme.palette()` for the token list
+  and previews, `theme.subscribe()` for live change notification. ICME never
+  reads `colors.yaml` directly.
+- **Appearance** — palette, skin and mode are applied as one composed
+  generation through the app-scoped Appearance consumer
+  (`ags-platform/adapters/appearance`) with
+  `createAppearance({ configDir: "ags-icme" })`. It reads
+  `$XDG_CONFIG_HOME/ags-icme/appearance.css` behind the single repointed
+  `$XDG_STATE_HOME/dotfiles/current/appearance` hop. `app.tsx` calls
+  `appearance.apply()` in `main()`. `style.css` stays the bundled glass
+  fallback when the appearance artifacts are absent; the adapter's monitor
+  reloads the generation, so no appearance request handler is registered.
+  Layout tokens are TSX-owned; the window size reads
+  `layout.ags-icme.root-width` / `root-height`.
 - **Icons** — this app has no `icon-registry.ts` copy: it renders icon
   templates from disk through `itr`, so the platform `IconProvider` does not
   apply.
@@ -79,19 +81,21 @@ invokes:
 ags request palette-refresh <appearance-hash> -i icon-color-mapping-editor
 ```
 
-`app.tsx` registers the platform's `createPaletteRefreshHandler` around
-`refreshEditorPalette()` from `ui/EditorWindow.tsx`. The editor also subscribes
-through `theme.subscribe()`; the platform adapter applies the composed CSS and
-then notifies, so the chrome and token list follow a palette change without a
-restart. The direct request path:
+`app.tsx` registers the platform's
+`createAppearanceRefreshHandler(appearance, work)` around
+`refreshEditorPalette()` from `ui/EditorWindow.tsx`. The helper re-applies the
+whole appearance (palette, skin and mode) before the editor work. The editor
+also subscribes through `theme.subscribe()` for its role/hex map, so the chrome
+and token list follow a palette change without a restart. The direct request
+path:
 
 1. returns `deferred` while a save is in progress and `busy` while another show
    refresh is in flight (never a concurrent rebuild);
 2. compares the provider role/hex fingerprint; an unchanged palette is a no-op
    that still reports `applied`;
 3. otherwise reloads the show (`mappingShow`) and swaps it in;
-4. re-applies the stable Theme pointer (`$XDG_CONFIG_HOME/ags/colors.css`)
-   only when the refresh converged (`status === "applied"`).
+4. always re-applies the composed appearance first; the app work only advances
+   the appearance hash when it returns `applied`.
 
 Pending edits are preserved: `refreshShow()` never clears the staging maps,
 the current selection or the loaded inputs. The handler answers with exactly
@@ -115,13 +119,13 @@ retargets `defaults.yaml` and names the groups shadowing the placeholder.
 
 ## Local development
 
-The program tuple is `ags-platform` `v0.8.0` (palette.v1 provider + app-scoped
-Skin) / `contracts` `v0.6.0` (skin token vocabulary) / `dotfiles-assets`. Those
+The program tuple is `ags-platform` `v0.9.0` (unified Appearance consumer) /
+`contracts` `v0.7.0` (appearance token vocabulary) / `dotfiles-assets`. Those
 tags are local-only in this run; the local gates use a gitignored symlink under
 `.dev/`.
 
 ```sh
-ln -s ../../../ags-platform .dev/ags-platform/v0.8.0   # or use AGS_PLATFORM_DEV
+ln -s ../../../ags-platform .dev/ags-platform/v0.9.0   # or use AGS_PLATFORM_DEV
 make test          # pure unit tests (Node only)
 make conformance   # manifest + handler + template gate
 make drift         # shared event client <-> contracts drift gate

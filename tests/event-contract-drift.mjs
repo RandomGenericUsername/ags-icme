@@ -8,9 +8,9 @@
 // (no live bus), and asserts the structural facts REQ-006/AD-27 turn on: the
 // event-bus / event-contract / theme copies are gone, the editor no longer
 // consumes `wallpaper.state` for palette (the runtime `palette-refresh` command
-// owns that), and the platform + generated bindings are used. Executed, never
-// text-scanned -- except the structural source reads, which are labelled as
-// such.
+// owns that), and the platform Appearance + generated bindings are used.
+// Executed, never text-scanned -- except the structural source reads, which are
+// labelled as such.
 //
 // Run from the repo root:  make drift
 
@@ -249,14 +249,30 @@ check(
   false,
 );
 check(
-  "app registers the palette-refresh handler",
-  /createPaletteRefreshHandler\(/.test(appSource),
+  "window still consumes the platform palette provider",
+  /from\s+"ags-platform\/adapters\/theme"/.test(windowSource) &&
+    /theme\.palette\(\)/.test(windowSource),
   true,
 );
 check(
-  "app imports the platform Theme port",
-  /from\s+"ags-platform\/adapters\/theme"/.test(appSource),
+  "app registers the v2 appearance-refresh handler",
+  /createAppearanceRefreshHandler\(appearance,/.test(appSource),
   true,
+);
+check(
+  "app applies the whole appearance in main()",
+  /main\(\)\s*\{[\s\S]*?appearance\.apply\(\)/.test(appSource),
+  true,
+);
+check(
+  "app imports the platform Appearance adapter",
+  /from\s+"ags-platform\/adapters\/appearance"/.test(appSource),
+  true,
+);
+check(
+  "app no longer applies theme or skin directly",
+  /\b(?:theme|skin)\.apply\(\)/.test(appSource),
+  false,
 );
 check(
   "publisher uses the vendored generated binding",

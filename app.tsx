@@ -1,24 +1,26 @@
 import app from "ags/gtk4/app";
 import Gtk from "gi://Gtk?version=4.0";
 import style from "./style.css";
-// Theming through the platform Theme port (spine AD-13): the adapter owns WHICH
-// artifact is applied — the stable `colors.css` pointer, repointed on every
-// palette change — so this app no longer carries its own theme.ts copy.
-import { theme } from "ags-platform/adapters/theme";
-import { createAppSkin } from "ags-platform/adapters/skin";
-import { createPaletteRefreshHandler } from "ags-platform/ports/palette-refresh";
+// Appearance through the platform v2 consumer (contracts v0.7.0): one composed
+// provider for palette + skin + mode and one monitor on the single repointed
+// `$XDG_STATE_HOME/dotfiles/current/appearance` hop. This replaces the split
+// Theme + Skin pair.
+import { createAppearance } from "ags-platform/adapters/appearance";
+import { createAppearanceRefreshHandler } from "ags-platform/ports/appearance-refresh";
 import { EditorWindow, refreshEditorPalette } from "./ui/EditorWindow";
 
-// The runtime-expanded skin for this app's config dir. `style.css` stays the
-// bundled glass fallback; the adapter's monitor reloads skin.css on change, so
-// no request handler is needed for the skin plane.
-const skin = createAppSkin({ configDir: "ags-icme" });
+// This app's slice of the v2 appearance plane: the runtime-composed
+// `$XDG_CONFIG_HOME/ags-icme/appearance.css` (palette + skin + mode) behind the
+// one `current/appearance` hop. The adapter owns the provider and its file
+// monitor, so an appearance change reloads without a request handler. A
+// missing artifact is a no-op, leaving the bundled `style.css` glass fallback.
+const appearance = createAppearance({ configDir: "ags-icme" });
 
 /**
  * Register one top-level window with the application.
  *
- * gnim types a JSX element — what `EditorWindow(monitor)` returns — as
- * `JSX.Element`, which it declares as the base `GObject.Object`, while AGS's
+ * gnim types a JSX element — what `EditorWindow(monitor, appearance)` returns —
+ * as `JSX.Element`, which it declares as the base `GObject.Object`, while AGS's
  * `app.add_window` is typed to take a `Gtk.Window`. At runtime the object a JSX
  * root call returns IS the `Gtk.Window` the tree was rooted in, so the cast
  * states a runtime truth the compiler cannot see. Same helper as `bar/app.tsx`
@@ -31,20 +33,22 @@ function addWindow(element: JSX.Element): void {
 app.start({
   css: style,
   instanceName: "icon-color-mapping-editor",
-  // Live palette refresh (AD-27) through the runtime command only. The editor
-  // returns `deferred` while a save is in progress; its staged pending edits,
-  // selection and loaded show survive every applied refresh. The Theme pointer
-  // is applied only when the editor actually converges.
-  requestHandler: createPaletteRefreshHandler(async () => {
+  // The runtime is the only palette-refresh trigger (AD-27). The platform
+  // helper re-applies the WHOLE appearance first, then runs the app-owned work:
+  // the editor's pending-preserving refresh. It returns `deferred` while a
+  // save is in progress and `busy` while a show refresh is already in flight,
+  // so staged edits, selection and loaded inputs survive every request. The
+  // helper owns the single JSON response and hash idempotence.
+  requestHandler: createAppearanceRefreshHandler(appearance, async () => {
     const result = await refreshEditorPalette();
-    if (result.status === "applied") theme.apply();
     return result;
   }),
   main() {
-    theme.apply();
-    skin.apply();
+    // One apply installs the composed palette + skin + mode sheet. Missing
+    // artifacts are a no-op and an identical generation is coalesced.
+    appearance.apply();
     // Single centered window on the primary monitor (dev tool, not chrome).
     const monitor = app.get_monitors()[0];
-    if (monitor) addWindow(EditorWindow(monitor));
+    if (monitor) addWindow(EditorWindow(monitor, appearance));
   },
 });

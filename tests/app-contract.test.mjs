@@ -6,15 +6,16 @@
 //   1. `app.manifest.json` is schema-valid and carries the ICME identity,
 //      including `holdsUnsavedState: true`;
 //   2. app.tsx / window / launcher / config dir agree with that identity;
-//   3. the live palette-refresh handler is the real v0.5.0 pending-preserving
-//      one (deferred during save, busy during refresh, fingerprint-idempotent,
-//      staging maps and selection untouched, Theme applied only on applied);
+//   3. the live palette-refresh handler is the v2 whole-appearance helper
+//      (deferred during save, busy during refresh, fingerprint-idempotent,
+//      staging maps and selection untouched) with the editor's existing work;
 //   4. the shared dev-flow template (AGENTS, tickets, guard, Makefile, CI,
 //      tests, templates/ags-app) is present and the platform's own
 //      `checkAppRepo` template gate passes;
 //   5. the manifest schema encodes the no-restart invariant for this app;
-//   6. app.tsx consumes the app-scoped Skin after the Theme pointer, without
-//      adding a request handler or dropping the bundled style.css fallback.
+//   6. app.tsx consumes the app-scoped Appearance, without adding a request
+//      command or dropping the bundled style.css fallback, and the window size
+//      comes from the ags-icme layout tokens.
 //
 // Run from the repo root:  make conformance
 // ---------------------------------------------------------------------------
@@ -211,7 +212,7 @@ test("the frozen copyable template is present for the next app", () => {
   }
 });
 
-test("the contracts v0.6.0 schema keeps restart invalid for this app", () => {
+test("the contracts v0.7.0 schema keeps restart invalid for this app", () => {
   const contractsRoot = findContractsRoot();
   assert.notEqual(contractsRoot, null, "cannot find contracts (set CONTRACTS_ROOT)");
   const schema = JSON.parse(
@@ -232,49 +233,58 @@ test("the contracts v0.6.0 schema keeps restart invalid for this app", () => {
   assert.equal(IDENTITY.holdsUnsavedState, true);
 });
 
-test("the Makefile pins the v0.8.0 platform skin provider and v0.6.0 contracts", () => {
+test("the Makefile pins the v0.9.0 appearance provider and v0.7.0 contracts", () => {
   const makefile = readText("Makefile");
-  assert.match(makefile, /^AGS_PLATFORM_VERSION := v0\.8\.0$/m);
-  assert.match(makefile, /^CONTRACTS_VERSION := v0\.6\.0$/m);
+  assert.match(makefile, /^AGS_PLATFORM_VERSION := v0\.9\.0$/m);
+  assert.match(makefile, /^CONTRACTS_VERSION := v0\.7\.0$/m);
 });
 
-// ── 3. App-scoped Skin consumption ─────────────────────────────────────────
+// ── 3. App-scoped Appearance consumption ───────────────────────────────────
 
-test("app.tsx applies the theme then the ags-icme skin", () => {
+test("app.tsx applies the ags-icme appearance and no longer applies theme or skin", () => {
   const app = readText("app.tsx");
   assert.match(
     app,
-    /import\s+\{\s*createAppSkin\s*\}\s+from\s+"ags-platform\/adapters\/skin"/,
-    "the app imports the platform Skin adapter",
+    /import\s+\{\s*createAppearance\s*\}\s+from\s+"ags-platform\/adapters\/appearance"/,
+    "the app imports the platform Appearance adapter",
   );
   assert.match(
     app,
-    /const skin = createAppSkin\(\{ configDir: "ags-icme" \}\)/,
-    "one module-level Skin scoped to this app's config dir",
+    /const appearance = createAppearance\(\{ configDir: "ags-icme" \}\)/,
+    "one module-level Appearance scoped to this app's config dir",
+  );
+  assert.doesNotMatch(
+    app,
+    /from\s+"ags-platform\/adapters\/(?:theme|skin)"/,
+    "the split Theme/Skin adapters are gone from app.tsx",
+  );
+  assert.doesNotMatch(
+    app,
+    /\b(?:theme|skin)\.apply\(\)/,
+    "the split Theme/Skin applies are gone",
   );
 
   const main = functionBody(app, "main()");
-  const themeAt = main.indexOf("theme.apply()");
-  const skinAt = main.indexOf("skin.apply()");
-  assert.notEqual(themeAt, -1, "main must apply the Theme pointer");
-  assert.notEqual(skinAt, -1, "main must apply the app-scoped Skin");
-  assert.ok(
-    themeAt < skinAt,
-    "the Theme pointer must be applied before the Skin",
+  assert.match(main, /appearance\.apply\(\)/, "main applies the whole appearance");
+  assert.doesNotMatch(main, /theme\.apply|skin\.apply/);
+  assert.match(
+    main,
+    /EditorWindow\(monitor, appearance\)/,
+    "the one window receives the app-scoped appearance",
   );
 });
 
-test("skin consumption adds no request handler and keeps the bundled fallback", () => {
+test("appearance consumption adds no request command and keeps the bundled fallback", () => {
   const app = readText("app.tsx");
   assert.equal(
     (app.match(/requestHandler\s*:/g) ?? []).length,
     1,
-    "the skin addition must not register a second request handler",
+    "the appearance migration must not register a second request handler",
   );
   assert.doesNotMatch(
     app,
-    /skin-refresh|skinRefresh|SKIN_REFRESH/,
-    "the adapter monitor reloads skin.css; no skin request is registered",
+    /skin-refresh|skinRefresh|SKIN_REFRESH|PALETTE_REFRESH_COMMAND|argv\[0\]/,
+    "the platform helper owns palette-refresh; no new request command is added",
   );
   assert.match(app, /css:\s*style/, "style.css stays the AGS fallback sheet");
 
@@ -286,21 +296,38 @@ test("skin consumption adds no request handler and keeps the bundled fallback", 
   );
 });
 
-// ── 4. The live handler is the real v0.5.0 pending-preserving one ──────────
-
-test("app.tsx registers the real palette-refresh handler", () => {
-  const app = readText("app.tsx");
-  assert.match(app, /from\s+"ags-platform\/ports\/palette-refresh"/);
-  assert.match(app, /import\s+\{\s*createPaletteRefreshHandler\s*\}/);
+test("the window size comes from the ags-icme layout tokens", () => {
+  const window = readText("ui", "EditorWindow.tsx");
   assert.match(
-    app,
-    /requestHandler:\s*createPaletteRefreshHandler\(async\s*\(\)\s*=>\s*\{[\s\S]*?await\s+refreshEditorPalette\(\)/,
-    "the handler awaits the editor's refresh",
+    window,
+    /appearance\.value\("layout\.ags-icme\.root-width", 960\)/,
+    "the root width token keeps its 960 fallback",
   );
   assert.match(
+    window,
+    /appearance\.value\("layout\.ags-icme\.root-height", 600\)/,
+    "the root height token keeps its 600 fallback",
+  );
+  assert.match(window, /default_width=\{rootWidth\.peek\(\)\}/);
+  assert.match(window, /default_height=\{rootHeight\.peek\(\)\}/);
+  assert.doesNotMatch(window, /default_width=\{1280\}|default_height=\{800\}/);
+});
+
+// ── 4. The live handler is the v2 pending-preserving one ───────────────────
+
+test("app.tsx registers the v2 appearance-refresh handler", () => {
+  const app = readText("app.tsx");
+  assert.match(app, /from\s+"ags-platform\/ports\/appearance-refresh"/);
+  assert.match(app, /import\s+\{\s*createAppearanceRefreshHandler\s*\}/);
+  assert.match(
     app,
-    /if\s*\(result\.status === "applied"\)\s*theme\.apply\(\)/,
-    "the Theme pointer is applied only when the refresh converges",
+    /requestHandler:\s*createAppearanceRefreshHandler\(appearance,\s*async\s*\(\)\s*=>\s*\{[\s\S]*?await\s+refreshEditorPalette\(\)[\s\S]*?return\s+result;[\s\S]*?\}\),/,
+    "the handler awaits the editor's refresh and returns its result",
+  );
+  assert.doesNotMatch(
+    app,
+    /theme\.apply|skin\.apply/,
+    "the platform helper re-applies the whole appearance",
   );
   assert.doesNotMatch(
     app,
