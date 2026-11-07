@@ -14,7 +14,7 @@
 - [REQ-004-skin-consumption/ticket.md](./REQ-004-skin-consumption/ticket.md) — Consume the ags-platform skin plane | `done` | links: worktree .worktrees/REQ-004/, branch ticket/REQ-004-skin-consumption
 - [REQ-005-appearance-migration/ticket.md](./REQ-005-appearance-migration/ticket.md) — Migrate ICME to the v2 Appearance plane | `done` | links: worktree .worktrees/REQ-005/, branch ticket/REQ-005-appearance-migration
 - [REQ-006-layout-default-size/ticket.md](./REQ-006-layout-default-size/ticket.md) — Restore the pre-v2 window default size fallback | `done` | links: worktree .worktrees/REQ-006/, branch ticket/REQ-006-layout-default-size
-- [REQ-007-generations-v3/ticket.md](./REQ-007-generations-v3/ticket.md) — Consume Generations v3 and the generation-bound appearance refresh | `in-progress` | links: worktree .worktrees/REQ-007/, branch ticket/REQ-007-generations-v3
+- [REQ-007-generations-v3/ticket.md](./REQ-007-generations-v3/ticket.md) — Consume Generations v3 and the generation-bound appearance refresh | `done` | links: worktree .worktrees/REQ-007/, branch ticket/REQ-007-generations-v3
 
 ## Bugs
 
