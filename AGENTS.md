@@ -33,7 +33,7 @@ mode=live  holdsUnsavedState=true
   mapping/template edits, so this app must NEVER be declared `mode: restart`.
 - No app imports another app. Depend on `ags-platform` (and `contracts` at test
   time only), never on a sibling app repo.
-- The runtime is the only palette-refresh trigger. Do not subscribe to
+- The runtime is the only appearance-refresh trigger. Do not subscribe to
   `wallpaper.state` for palette application and do not invent a palette event.
 
 ## 3. Ticket flow
@@ -61,7 +61,7 @@ no self-hosted runner and no CI secret dependency.
 - `make bundle` — LOCAL: `ags bundle app.tsx build/ags-icme.js`.
 - `make gates` — all of the above.
 
-The program tuple is `ags-platform` v0.9.0 / `contracts` v0.7.0 /
+The program tuple is `ags-platform` v1.0.0 / `contracts` v0.8.0 /
 `dotfiles-assets`, local-only in this run. `.dev/` is gitignored; never commit a
 fetched platform, `node_modules/`, `@girs/`, generated `tsconfig.json` or
 bundle output.
@@ -73,25 +73,27 @@ moved. Installed tags are read-only; writable state lives under XDG paths, never
 inside the tag. Tag only after `make gates` passes, and record the evidence in
 the release ticket.
 
-## 6. Palette-refresh invariants
+## 6. Appearance-refresh invariants
 
-The editor consumes the platform Appearance consumer for the composed palette,
-skin and mode sheet, and the Theme provider (`theme.palette()` for the
-`palette.v1` role/hex map and `theme.subscribe()` for change notification) for
-its roles; it never reads `colors.yaml` itself. The runtime `palette-refresh`
-handler is registered in `app.tsx` through the platform's
-`createAppearanceRefreshHandler(appearance, work)` and calls
+The editor consumes the platform Generations v3 Appearance consumer for the
+composed palette, skin and mode sheet, and the Theme provider (`theme.palette()`
+for the `palette.v1` role/hex map and `theme.subscribe()` for change
+notification) for its roles; it never reads `colors.yaml` itself. The runtime
+`appearance-refresh <genHash>` handler is registered in `app.tsx` through the
+platform's `createAppearanceRefreshHandler(appearance, work)` and calls
 `refreshEditorPalette()` from `ui/EditorWindow.tsx`. It is pending-preserving by
 construction:
 
-- exactly one JSON-string response per request, through the platform helper;
-- the whole appearance is re-applied on every request before the editor work;
-- `deferred` while a save is in progress, `busy` while a show refresh is in
-  flight — never a concurrent rebuild;
+- exactly one JSON-string response per request, naming the requested `genHash`,
+  through the platform helper;
+- the requested generation is installed on every request before the editor
+  work;
+- `deferred` while a save is in progress and `deferred` (with a reason) while a
+  show refresh is in flight — never a concurrent rebuild;
 - `refreshShow()` swaps the loaded show only; the staging maps (`pending`,
   `vocabPending`, `templatePending`, `newPlaceholders`, `manifestPendings`),
   selection and loaded inputs are never cleared by a refresh;
-- the appearance hash advances only when the editor work converges
+- the applied generation advances only when the editor work converges
   (`status === "applied"`);
 - fingerprint-idempotent: an unchanged scheme fingerprint is a no-op that still
   reports `applied`.

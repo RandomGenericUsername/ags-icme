@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.5.0 — 2026-11-07
+
+- Consume Generations v3: `ags-platform` v1.0.0 / `contracts` v0.8.0. The
+  app-scoped Appearance consumer now reads only
+  `$XDG_STATE_HOME/dotfiles/current/manifest.json` and
+  `current/appearance/ags-icme.css`; `createAppearance({ configDir:
+  "ags-icme" })` and `appearance.apply()` are unchanged.
+- The runtime refresh is the generation-bound
+  `appearance-refresh <genHash>` protocol. `createAppearanceRefreshHandler`
+  still wraps the editor work and answers exactly one JSON string naming the
+  requested generation; the v2 `palette-refresh` `{ ok: true }` ack is gone.
+- Preserve the deferred-save behavior. The v3 work union has no `busy` status,
+  so an in-flight show refresh now returns `deferred` with a reason instead of
+  `busy`. Pending edits, selection, loaded inputs, the layout tokens and
+  `style.css` are unchanged.
+- Pin the local tuple to `ags-platform` v1.0.0 / `contracts` v0.8.0 and update
+  the source gates that asserted the v2 `palette-refresh` protocol.
+
 ## v0.4.1 — 2026-11-06
 
 - Restore the `ui/EditorWindow.tsx` default-size fallbacks to the pre-v2

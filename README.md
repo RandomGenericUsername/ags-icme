@@ -43,15 +43,16 @@ This app depends on `ags-platform`, `contracts` (generated binding) and
   and previews, `theme.subscribe()` for live change notification. ICME never
   reads `colors.yaml` directly.
 - **Appearance** — palette, skin and mode are applied as one composed
-  generation through the app-scoped Appearance consumer
+  generation through the app-scoped Generations v3 Appearance consumer
   (`ags-platform/adapters/appearance`) with
-  `createAppearance({ configDir: "ags-icme" })`. It reads
-  `$XDG_CONFIG_HOME/ags-icme/appearance.css` behind the single repointed
-  `$XDG_STATE_HOME/dotfiles/current/appearance` hop. `app.tsx` calls
-  `appearance.apply()` in `main()`. `style.css` stays the bundled glass
-  fallback when the appearance artifacts are absent; the adapter's monitor
-  reloads the generation, so no appearance request handler is registered.
-  Layout tokens are TSX-owned; the window size reads
+  `createAppearance({ configDir: "ags-icme" })`. It reads only
+  `$XDG_STATE_HOME/dotfiles/current/manifest.json` and
+  `current/appearance/ags-icme.css` behind the single repointed `current` hop.
+  `app.tsx` calls `appearance.apply()` in `main()`. `style.css` stays the
+  bundled glass fallback when the appearance artifacts are absent; the
+  adapter's monitor reloads a committed generation, and `app.tsx` registers the
+  generation-bound `appearance-refresh <genHash>` handler for the runtime's
+  direct trigger. Layout tokens are TSX-owned; the window size reads
   `layout.ags-icme.root-width` / `root-height`.
 - **Icons** — this app has no `icon-registry.ts` copy: it renders icon
   templates from disk through `itr`, so the platform `IconProvider` does not
@@ -71,37 +72,40 @@ the editor reads roles from the platform Theme provider. The editor never
 touches `generated/` or runs `itr render`;
 rendered icons refresh on the next wallpaper/theme run as usual.
 
-## Live palette refresh
+## Live appearance refresh
 
 The runtime deliberately never restarts this instance on a wallpaper set (its
 config dir `ags-icme` is in `AgsReloader.DEFAULT_SKIP_CONFIG_DIRS`). Instead it
-invokes:
+invokes the frozen Generations v3 command:
 
 ```sh
-ags request palette-refresh <appearance-hash> -i icon-color-mapping-editor
+ags request appearance-refresh <genHash> -i icon-color-mapping-editor
 ```
 
 `app.tsx` registers the platform's
 `createAppearanceRefreshHandler(appearance, work)` around
-`refreshEditorPalette()` from `ui/EditorWindow.tsx`. The helper re-applies the
-whole appearance (palette, skin and mode) before the editor work. The editor
-also subscribes through `theme.subscribe()` for its role/hex map, so the chrome
-and token list follow a palette change without a restart. The direct request
-path:
+`refreshEditorPalette()` from `ui/EditorWindow.tsx`. The helper resolves and
+installs the requested generation (palette, skin and mode) before the editor
+work, and answers only `{"applied":"<genHash>"}`,
+`{"deferred":"reason","genHash":"<genHash>"}` or
+`{"failed":"reason","retryable":bool,"genHash":"<genHash>"}`. The editor also
+subscribes through `theme.subscribe()` for its role/hex map, so the chrome and
+token list follow a palette change without a restart. The direct request path:
 
-1. returns `deferred` while a save is in progress and `busy` while another show
-   refresh is in flight (never a concurrent rebuild);
+1. returns `deferred` while a save is in progress and `deferred` (with a
+   reason) while another show refresh is in flight (never a concurrent
+   rebuild);
 2. compares the provider role/hex fingerprint; an unchanged palette is a no-op
    that still reports `applied`;
 3. otherwise reloads the show (`mappingShow`) and swaps it in;
-4. always re-applies the composed appearance first; the app work only advances
-   the appearance hash when it returns `applied`.
+4. installs the requested generation first; the app work only advances the
+   applied generation when it returns `applied`.
 
 Pending edits are preserved: `refreshShow()` never clears the staging maps,
 the current selection or the loaded inputs. The handler answers with exactly
-one JSON-encoded string (`{"ok":true}`, a `deferred` response, or a protocol
-failure), via `ags-platform/ports/palette-refresh`. A wallpaper change never
-restarts the process.
+one JSON-encoded string naming the requested `genHash`, via
+`ags-platform/ports/appearance-refresh`. A wallpaper change never restarts the
+process.
 
 ## Editing flow
 
@@ -119,13 +123,13 @@ retargets `defaults.yaml` and names the groups shadowing the placeholder.
 
 ## Local development
 
-The program tuple is `ags-platform` `v0.9.0` (unified Appearance consumer) /
-`contracts` `v0.7.0` (appearance token vocabulary) / `dotfiles-assets`. Those
-tags are local-only in this run; the local gates use a gitignored symlink under
-`.dev/`.
+The program tuple is `ags-platform` `v1.0.0` (Generations v3 Appearance
+consumer) / `contracts` `v0.8.0` (generation + appearance token vocabulary) /
+`dotfiles-assets`. Those tags are local-only in this run; the local gates use a
+gitignored symlink under `.dev/`.
 
 ```sh
-ln -s ../../../ags-platform .dev/ags-platform/v0.9.0   # or use AGS_PLATFORM_DEV
+ln -s ../../../ags-platform .dev/ags-platform/v1.0.0   # or use AGS_PLATFORM_DEV
 make test          # pure unit tests (Node only)
 make conformance   # manifest + handler + template gate
 make drift         # shared event client <-> contracts drift gate

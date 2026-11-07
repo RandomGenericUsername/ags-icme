@@ -7,8 +7,9 @@
 // subscribe-before-read hydration state machine with a scripted fake transport
 // (no live bus), and asserts the structural facts REQ-006/AD-27 turn on: the
 // event-bus / event-contract / theme copies are gone, the editor no longer
-// consumes `wallpaper.state` for palette (the runtime `palette-refresh` command
-// owns that), and the platform Appearance + generated bindings are used.
+// consumes `wallpaper.state` for palette (the runtime
+// `appearance-refresh <genHash>` command owns that), and the platform
+// Appearance + generated bindings are used.
 // Executed, never text-scanned -- except the structural source reads, which are
 // labelled as such.
 //
@@ -255,7 +256,7 @@ check(
   true,
 );
 check(
-  "app registers the v2 appearance-refresh handler",
+  "app registers the v3 appearance-refresh handler",
   /createAppearanceRefreshHandler\(appearance,/.test(appSource),
   true,
 );

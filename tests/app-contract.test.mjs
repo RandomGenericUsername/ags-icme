@@ -6,9 +6,10 @@
 //   1. `app.manifest.json` is schema-valid and carries the ICME identity,
 //      including `holdsUnsavedState: true`;
 //   2. app.tsx / window / launcher / config dir agree with that identity;
-//   3. the live palette-refresh handler is the v2 whole-appearance helper
-//      (deferred during save, busy during refresh, fingerprint-idempotent,
-//      staging maps and selection untouched) with the editor's existing work;
+//   3. the live handler is the v3 generation-bound appearance helper
+//      (deferred during save and during an in-flight refresh,
+//      fingerprint-idempotent, staging maps and selection untouched) with the
+//      editor's existing work;
 //   4. the shared dev-flow template (AGENTS, tickets, guard, Makefile, CI,
 //      tests, templates/ags-app) is present and the platform's own
 //      `checkAppRepo` template gate passes;
@@ -212,7 +213,7 @@ test("the frozen copyable template is present for the next app", () => {
   }
 });
 
-test("the contracts v0.7.0 schema keeps restart invalid for this app", () => {
+test("the contracts v0.8.0 schema keeps restart invalid for this app", () => {
   const contractsRoot = findContractsRoot();
   assert.notEqual(contractsRoot, null, "cannot find contracts (set CONTRACTS_ROOT)");
   const schema = JSON.parse(
@@ -233,10 +234,10 @@ test("the contracts v0.7.0 schema keeps restart invalid for this app", () => {
   assert.equal(IDENTITY.holdsUnsavedState, true);
 });
 
-test("the Makefile pins the v0.9.0 appearance provider and v0.7.0 contracts", () => {
+test("the Makefile pins the v1.0.0 appearance provider and v0.8.0 contracts", () => {
   const makefile = readText("Makefile");
-  assert.match(makefile, /^AGS_PLATFORM_VERSION := v0\.9\.0$/m);
-  assert.match(makefile, /^CONTRACTS_VERSION := v0\.7\.0$/m);
+  assert.match(makefile, /^AGS_PLATFORM_VERSION := v1\.0\.0$/m);
+  assert.match(makefile, /^CONTRACTS_VERSION := v0\.8\.0$/m);
 });
 
 // ── 3. App-scoped Appearance consumption ───────────────────────────────────
@@ -284,7 +285,7 @@ test("appearance consumption adds no request command and keeps the bundled fallb
   assert.doesNotMatch(
     app,
     /skin-refresh|skinRefresh|SKIN_REFRESH|PALETTE_REFRESH_COMMAND|argv\[0\]/,
-    "the platform helper owns palette-refresh; no new request command is added",
+    "the platform helper owns appearance-refresh; no new request command is added",
   );
   assert.match(app, /css:\s*style/, "style.css stays the AGS fallback sheet");
 
@@ -313,9 +314,9 @@ test("the window size comes from the ags-icme layout tokens", () => {
   assert.doesNotMatch(window, /default_width=\{1280\}|default_height=\{800\}/);
 });
 
-// ── 4. The live handler is the v2 pending-preserving one ───────────────────
+// ── 4. The live handler is the v3 pending-preserving one ───────────────────
 
-test("app.tsx registers the v2 appearance-refresh handler", () => {
+test("app.tsx registers the v3 appearance-refresh handler", () => {
   const app = readText("app.tsx");
   assert.match(app, /from\s+"ags-platform\/ports\/appearance-refresh"/);
   assert.match(app, /import\s+\{\s*createAppearanceRefreshHandler\s*\}/);
@@ -336,12 +337,14 @@ test("app.tsx registers the v2 appearance-refresh handler", () => {
   );
 });
 
-test("the refresh defers during save, is busy while refreshing, and is fingerprint-idempotent", () => {
+test("the v3 refresh defers during save and in-flight work, and is fingerprint-idempotent", () => {
   const window = readText("ui", "EditorWindow.tsx");
   const refresh = functionBody(window, "async function refreshEditorPaletteNow");
 
   assert.match(refresh, /if \(saving\(\)\) return \{ status: "deferred", reason: /);
-  assert.match(refresh, /if \(schemeRefreshing\) return \{ status: "busy" \}/);
+  assert.match(refresh, /if \(schemeRefreshing\) \{/);
+  assert.match(refresh, /return \{ status: "deferred", reason: "a show refresh is in progress" \}/);
+  assert.doesNotMatch(refresh, /status: "busy"/);
   assert.match(refresh, /const roles = providerRoles\(\)/);
   assert.match(refresh, /const fp = paletteFingerprint\(roles\)/);
   assert.match(refresh, /if \(fp === paletteFp\) return \{ status: "applied" \}/);
@@ -382,7 +385,7 @@ test("the editor no longer follows wallpaper.state for palette", () => {
   const window = readText("ui", "EditorWindow.tsx");
   assert.doesNotMatch(window, /domainEvents\.subscribe/);
   assert.doesNotMatch(window, /WALLPAPER_STATE_TOPIC/);
-  assert.match(window, /paletteRefresh|palette-refresh/);
+  assert.match(window, /refreshEditorPaletteNow|appearance-refresh/);
 });
 
 test("the editor consumes the platform palette provider and offers palette.v1 roles", () => {

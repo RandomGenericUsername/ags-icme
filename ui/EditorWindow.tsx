@@ -4,7 +4,7 @@ import GLib from "gi://GLib?version=2.0";
 import { createEffect, createState } from "ags";
 import { theme } from "ags-platform/adapters/theme";
 import type { Appearance } from "ags-platform/ports/appearance";
-import type { PaletteRefreshResult } from "ags-platform/ports/palette-refresh";
+import type { AppearanceRefreshWorkResult } from "ags-platform/ports/appearance-refresh";
 import {
   manifestRegister,
   mappingSet,
@@ -26,8 +26,8 @@ import {
 } from "../lib/palette";
 // The ONE shared event client (spine AD-5): the app-local `lib/event-bus*.ts`
 // copies are gone. The editor publishes `icme.saved` through the generated
-// binding; palette changes arrive through the runtime `palette-refresh`
-// command, not `wallpaper.state` (AD-27).
+// binding; appearance changes arrive through the runtime
+// `appearance-refresh <genHash>` command, not `wallpaper.state` (AD-27).
 import { publishIcmeSaved } from "../lib/icme-saved-gio";
 import type {
   PendingEdit,
@@ -71,13 +71,13 @@ function providerRoles(): RoleMap {
 // save pipeline. One centered overlay window on the given monitor (same
 // layer-shell pattern as the capture dialog).
 /**
- * Editor palette refresher, registered by the one editor window and called
- * from the app-level `palette-refresh` handler. It never clears the staging
+ * Editor appearance refresher, registered by the one editor window and called
+ * from the app-level `appearance-refresh` handler. It never clears the staging
  * maps, so pending edits and the current selection survive a refresh.
  */
-let refreshPalette: (() => Promise<PaletteRefreshResult>) | null = null;
+let refreshPalette: (() => Promise<AppearanceRefreshWorkResult>) | null = null;
 
-export function refreshEditorPalette(): Promise<PaletteRefreshResult> {
+export function refreshEditorPalette(): Promise<AppearanceRefreshWorkResult> {
   return refreshPalette?.() ?? Promise.resolve({ status: "applied" });
 }
 
@@ -206,13 +206,16 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor, appearance: Appearance) {
   // colors on the next SUPER+I toggle. No background polling. Pending edits
   // are preserved: only the palette accessor changes here.
 
-  // Runtime palette refresh (AD-27). The editor no longer follows
-  // `wallpaper.state` for palette; that event is progress/status only. The
-  // provider subscription below is the primary update path; this handler keeps
-  // the protocol's deferred/busy contract for the runtime's direct trigger.
-  async function refreshEditorPaletteNow(): Promise<PaletteRefreshResult> {
+  // Runtime appearance refresh (AD-27, Generations v3). The editor no longer
+  // follows `wallpaper.state` for palette; that event is progress/status only.
+  // The provider subscription below is the primary update path; this work keeps
+  // the protocol's deferred contract for the runtime's direct trigger. v3 has
+  // no `busy` status, so an in-flight show refresh is deferred by reason.
+  async function refreshEditorPaletteNow(): Promise<AppearanceRefreshWorkResult> {
     if (saving()) return { status: "deferred", reason: "a save is in progress" };
-    if (schemeRefreshing) return { status: "busy" };
+    if (schemeRefreshing) {
+      return { status: "deferred", reason: "a show refresh is in progress" };
+    }
     try {
       const roles = providerRoles();
       const fp = paletteFingerprint(roles);
