@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.1 — 2026-11-07
+
+- Bump the local dev pin from `ags-platform` v1.0.0 to v1.0.1 (the BUG-002
+  appearance CSS hex-literal validation patch) and keep `contracts` at v0.8.0
+  in the Makefile, CI, README, AGENTS and the source pin assertion. No app
+  code, handler/ack behavior, deferred-save logic, `style.css`, layout token or
+  lane policy changed.
+
 ## v0.5.0 — 2026-11-07
 
 - Consume Generations v3: `ags-platform` v1.0.0 / `contracts` v0.8.0. The
