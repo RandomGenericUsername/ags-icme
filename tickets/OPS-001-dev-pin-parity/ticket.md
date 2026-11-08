@@ -41,17 +41,72 @@ to `main` behind annotated tag `v0.5.1`.
 
 ## Evidence
 
-Pending implementation.
+Implementation commit `4ee7135` on `ticket/OPS-001-dev-pin-parity`; ticket
+opened in `32dcc69` on base `49fd1ea` (main, `v0.5.0`).
+
+- Pins: `Makefile:11-12` sets `AGS_PLATFORM_VERSION := v1.0.1` and
+  `CONTRACTS_VERSION := v0.8.0` (comment and help path updated at `:3-10,34`);
+  `.github/workflows/ci.yml:11,38-39,50` checks out `ags-platform` at
+  `v1.0.1` under `.dev/ags-platform/v1.0.1` and keeps `contracts` at `v0.8.0`
+  (`:45`). `tests/app-contract.test.mjs:237-241` asserts the `v1.0.1` /
+  `v0.8.0` pins. README (`:126-128,133`), AGENTS (`:64`) and CHANGELOG
+  (`:3-9`) carry the same tuple.
+- Local checkouts used by the gates:
+  `ags-platform` `git describe --tags --exact-match` → `v1.0.1`; `contracts` →
+  `v0.8.0`.
+- Unchanged surfaces: `git diff --quiet 49fd1ea..HEAD -- app.tsx lib ui
+  style.css templates` exits 0. The implementation diff touches only
+  `.github/workflows/ci.yml`, `AGENTS.md`, `CHANGELOG.md`, `Makefile`,
+  `README.md` and `tests/app-contract.test.mjs`.
+- `make gates` with
+  `AGS_PLATFORM_DEV=/home/inumaki/Development/dotfiles/ags-platform` and
+  `CONTRACTS_ROOT=/home/inumaki/Development/dotfiles/contracts` exited 0 (log
+  `/tmp/opencode/icme-ops001/gates-final.log`):
+  - all 7 pure suites green (contract, svg, model, diff, templates,
+    icme-saved-smoke, palette);
+  - conformance 16/16 pass, 0 fail, 0 skipped;
+  - drift 49 `ok` checks, `all checks passed`;
+  - bundle `build/ags-icme.js` 1184100 bytes;
+  - typecheck 0 in-tree errors (28 tolerated `/usr/share/ags/js`, 0
+    ags-platform).
+- The first fresh-worktree run failed only at `typecheck: platform link
+  missing` because `deps` ran `npm install` after `platform-dev` and pruned
+  `node_modules/ags-platform`; the rerun with the toolchain installed passed.
+  No source or gate definition changed.
+- Release: annotated tag `v0.5.1` on the merged closeout commit after the
+  gates; `main` plus the tag are pushed. Existing tags are not moved.
+
+Verify:
+
+```sh
+rg -n 'v1\.0\.1|v0\.8\.0' Makefile .github/workflows/ci.yml \
+  tests/app-contract.test.mjs README.md AGENTS.md
+git diff --quiet 49fd1ea..HEAD -- app.tsx lib ui style.css templates
+AGS_PLATFORM_DEV=/home/inumaki/Development/dotfiles/ags-platform \
+  CONTRACTS_ROOT=/home/inumaki/Development/dotfiles/contracts make gates
+git show v0.5.1 --stat
+```
 
 ## Commits
 
 | Commit | Subject |
 | --- | --- |
-| this commit | `docs(OPS-001): open dev-pin parity ticket` |
-| pending | `chore(OPS-001): bump local ags-platform pin to v1.0.1` |
-| pending | `docs(OPS-001): record dev-pin parity evidence and close ticket` |
+| `32dcc69` | `docs(OPS-001): open dev-pin parity ticket` |
+| `4ee7135` | `chore(OPS-001): bump local ags-platform pin to v1.0.1` |
+| this closeout commit | `docs(OPS-001): record dev-pin parity evidence and close ticket` |
+
+## Deviations / notes
+
+- `templates/ags-app/` is the frozen copyable scaffold and is untouched; it
+  does not declare this app's tuple.
+- Historical `v1.0.0` references in `tickets/REQ-007-generations-v3/ticket.md`
+  and the older CHANGELOG entries are kept as history and are not rewritten.
+- Worktree-local `@girs/`, `env.d.ts`, `node_modules/` and `build/` output are
+  gitignored and not committed. No live GUI apply was run.
 
 ## Status
 
-In progress on `ticket/OPS-001-dev-pin-parity`, worktree `.worktrees/OPS-001/`,
-base `49fd1ea` (main, `v0.5.0`).
+Complete on `ticket/OPS-001-dev-pin-parity`; worktree `.worktrees/OPS-001/`,
+base `49fd1ea` (main, `v0.5.0`). The branch is fast-forward merged to `main`,
+annotated tag `v0.5.1` is created on the merged closeout commit after the
+gates, and `main` plus the tag are pushed. Existing tags are not moved.

@@ -22,7 +22,7 @@
 
 ## Ops tasks
 
-- [OPS-001-dev-pin-parity/ticket.md](./OPS-001-dev-pin-parity/ticket.md) — Bump the local ags-platform pin from v1.0.0 to v1.0.1 | `in-progress` | links: worktree .worktrees/OPS-001/, branch ticket/OPS-001-dev-pin-parity
+- [OPS-001-dev-pin-parity/ticket.md](./OPS-001-dev-pin-parity/ticket.md) — Bump the local ags-platform pin from v1.0.0 to v1.0.1 | `done` | links: worktree .worktrees/OPS-001/, branch ticket/OPS-001-dev-pin-parity
 
 ## Spikes
 
