@@ -1,7 +1,7 @@
 import app from "ags/gtk4/app";
 import Gtk from "gi://Gtk?version=4.0";
 import style from "./style.css";
-// Appearance through the platform Generations v3 consumer (contracts v0.8.0):
+// Appearance through the platform Generations v3 consumer (contracts v0.12.0):
 // one composed provider for palette + skin + mode and one monitor on the single
 // repointed `$XDG_STATE_HOME/dotfiles/current` hop. This replaces the split
 // Theme + Skin pair and the v2 multi-pointer read.

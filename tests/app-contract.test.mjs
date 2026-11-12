@@ -213,7 +213,7 @@ test("the frozen copyable template is present for the next app", () => {
   }
 });
 
-test("the contracts v0.8.0 schema keeps restart invalid for this app", () => {
+test("the contracts v0.12.0 schema keeps restart invalid for this app", () => {
   const contractsRoot = findContractsRoot();
   assert.notEqual(contractsRoot, null, "cannot find contracts (set CONTRACTS_ROOT)");
   const schema = JSON.parse(
@@ -234,10 +234,10 @@ test("the contracts v0.8.0 schema keeps restart invalid for this app", () => {
   assert.equal(IDENTITY.holdsUnsavedState, true);
 });
 
-test("the Makefile pins the v1.0.1 appearance provider and v0.8.0 contracts", () => {
+test("the Makefile pins the v1.1.0 appearance provider and v0.12.0 contracts", () => {
   const makefile = readText("Makefile");
-  assert.match(makefile, /^AGS_PLATFORM_VERSION := v1\.0\.1$/m);
-  assert.match(makefile, /^CONTRACTS_VERSION := v0\.8\.0$/m);
+  assert.match(makefile, /^AGS_PLATFORM_VERSION := v1\.1\.0$/m);
+  assert.match(makefile, /^CONTRACTS_VERSION := v0\.12\.0$/m);
 });
 
 // ── 3. App-scoped Appearance consumption ───────────────────────────────────

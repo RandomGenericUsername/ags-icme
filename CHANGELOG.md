@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.2 — 2026-11-12
+
+- Bump the local dev pins to `ags-platform` v1.1.0 (the REQ-020 required
+  `surface.window` role) and `contracts` v0.12.0 (the host-defaults,
+  format-aware-consumer, host-rectangle-radii and window-role vocabulary) in
+  the Makefile, CI, README, AGENTS and the source pin assertion. The app.tsx
+  header comment names the new contracts version. No app/UI behavior, handler
+  or ack behavior, deferred-save logic, `style.css`, layout token or lane
+  policy changed.
+
 ## v0.5.1 — 2026-11-07
 
 - Bump the local dev pin from `ags-platform` v1.0.0 to v1.0.1 (the BUG-002
