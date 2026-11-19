@@ -156,6 +156,7 @@ test("the manifest is schema-valid and carries the ICME identity", () => {
 test("the manifest agrees with app.tsx, the window and the stylesheet", () => {
   const app = readText("app.tsx");
   const window = readText("ui", "EditorWindow.tsx");
+  const inputs = readText("ui", "InputsPanel.tsx");
   const css = readText("style.css");
   assert.match(app, /instanceName:\s*"icon-color-mapping-editor"/);
   // `<instance>-window` is the manifest convention the launcher probes first.
@@ -164,9 +165,11 @@ test("the manifest agrees with app.tsx, the window and the stylesheet", () => {
     /export const WINDOW_NAME = "icon-color-mapping-editor-window"/,
   );
   assert.match(window, /name=\{WINDOW_NAME\}/);
-  assert.match(window, /app\.get_window\(WINDOW_NAME\)/);
   assert.doesNotMatch(window, /name="icme-window"/);
   assert.match(css, /window#icon-color-mapping-editor-window/);
+  // The active Inputs panel is dropdown/read-only: no file chooser or dialog state.
+  assert.match(inputs, /Gtk\.DropDown/);
+  assert.doesNotMatch(inputs, /Gtk\.FileChooser|choosePath|onDialogOpenChange/);
 });
 
 test("the launcher, keybind description and config dir are documented", () => {

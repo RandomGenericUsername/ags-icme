@@ -20,7 +20,7 @@ BUNDLE_FILE := build/ags-icme.js
 
 # The editor's pure library suites (the v0.5.0 app tests, copied verbatim).
 # `tests/event-contract-drift.mjs` is the separate `make drift` gate.
-TEST_SUITES := contract svg model diff templates icme-saved-smoke palette
+TEST_SUITES := contract svg model diff templates icme-saved-smoke palette targets
 
 help:
 	@echo "make test         pure unit tests (Node only; stock runner)"

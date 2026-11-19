@@ -157,6 +157,12 @@ window#icon-color-mapping-editor-window {
   margin: 9px 0 2px;
 }
 
+.input-hint {
+  font-size: 11px;
+  color: alpha(@on_surface, 0.62);
+  margin: 6px 0 2px;
+}
+
 /* Fields are solid @surface_container surfaces (shared field rule). */
 .path {
   background-color: @surface_container;

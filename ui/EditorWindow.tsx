@@ -1,5 +1,4 @@
 import { Astal, Gdk, Gtk } from "ags/gtk4";
-import app from "ags/gtk4/app";
 import GLib from "gi://GLib?version=2.0";
 import { createEffect, createState } from "ags";
 import { theme } from "ags-platform/adapters/theme";
@@ -17,6 +16,8 @@ import {
   defaultsPathFor,
   mtimeOf,
   resolveInputs,
+  resolveTargets,
+  type EditTarget,
   type EditorInputs,
 } from "../lib/inputs";
 import {
@@ -89,9 +90,14 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor, appearance: Appearance) {
   const rootWidth = appearance.value("layout.ags-icme.root-width", 1280);
   const rootHeight = appearance.value("layout.ags-icme.root-height", 800);
 
+  const targets = resolveTargets();
+
   const [show, setShow] = createState<MappingShow | null>(null);
   const [loadError, setLoadError] = createState<string | null>(null);
-  const [inputs, setInputs] = createState<EditorInputs>(resolveInputs());
+  const [target, setTarget] = createState<EditTarget>(targets.defaultTarget);
+  const [inputs, setInputs] = createState<EditorInputs>(
+    resolveInputs(targets.defaultTarget, targets),
+  );
   // The typed role map is the provider's, not a snapshot parsed from the
   // show. The platform adapter owns which artifact is current.
   const [palette, setPalette] = createState<RoleMap>(providerRoles());
@@ -198,7 +204,7 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor, appearance: Appearance) {
     setManifestPendings([...manifestPendings(), entry]);
   }
 
-  load(resolveInputs());
+  load(resolveInputs(targets.defaultTarget, targets));
 
   // Follow the provider palette on every invocation: the window's `map`
   // handler (below) re-reads the role map (the source of truth), so a
@@ -445,20 +451,14 @@ export function EditorWindow(gdkmonitor: Gdk.Monitor, appearance: Appearance) {
   left.append(
     InputsPanel({
       inputs,
-      // Every pending kind locks the pickers: switching inputs runs load(),
-      // which discards all staging — previously only mapping pendings locked,
-      // so staged template edits were wiped silently by a picker change.
+      target,
+      targets,
+      // Every pending kind locks the target picker: switching targets runs
+      // load(), which discards all staging.
       pendingCount: totalPending,
-      defaults: resolveInputs(),
-      onChange: (next) => load(next),
-      onReset: () => load(resolveInputs()),
-      // Native file choosers are regular windows and always render below a
-      // layer-shell OVERLAY surface — hide the editor while one is open.
-      onDialogOpenChange: (open) => {
-        const win = app.get_window(WINDOW_NAME);
-        if (!win) return;
-        if (open) win.show();
-        else win.hide();
+      onChangeTarget: (next) => {
+        setTarget(next);
+        load(resolveInputs(next, targets));
       },
     }),
   );

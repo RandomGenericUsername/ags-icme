@@ -60,17 +60,25 @@ This app depends on `ags-platform`, `contracts` (generated binding) and
 
 ## Inputs
 
-The authoring model is **repo-authoritative**: the editor edits the dotfiles
-repo manifest (`dotfiles/config/icon-template-color-scheme-mappings/`) whenever a
-checkout is detectable — via `ICME_REPO_ROOT` (set by the provisioned launcher)
-or a working-directory ancestor walk — and bootstrap converges the manifest into
-the spine on every run. On machines without a checkout it edits the spine copy
-(`~/.local/share/dotfiles/icon-mappings/`) instead. `ICME_ICONS_YAML`,
-`ICME_TEMPLATE_ROOT` and `ICME_REPO_ROOT` override the resolution. The color
-scheme itself is never a path input: ITR resolves it from its own settings and
-the editor reads roles from the platform Theme provider. The editor never
-touches `generated/` or runs `itr render`;
-rendered icons refresh on the next wallpaper/theme run as usual.
+The editor resolves two explicit targets:
+
+- **installed** — the seeded spine copy under the user data dir:
+  `~/.local/share/dotfiles/icon-templates/` and
+  `~/.local/share/dotfiles/icon-mappings/icons.yaml`.
+- **repo** — a `dotfiles-assets` checkout: `<root>/icons/templates/` and
+  `<root>/icons/mappings/icons.yaml`. The legacy dotfiles-v3 composition root
+  is still accepted as a fallback (`<root>/dotfiles/assets/icon-templates/` and
+  `<root>/dotfiles/config/icon-template-color-scheme-mappings/icons.yaml`).
+
+A fresh session prefers the repo target when one is detectable; otherwise it
+uses the installed spine. Detection order is `DOTFILES_DEV_INPUTS_ROOT`,
+`ICME_REPO_ROOT` (backward compatibility), a working-directory ancestor walk,
+the sibling `dotfiles-assets`, then the sibling legacy `dotfiles-v3`.
+`ICME_TEMPLATE_ROOT` and `ICME_ICONS_YAML` override the repo target only —
+installed always points at the real spine. The color scheme itself is never a
+path input: ITR resolves it from its own settings and the editor reads roles
+from the platform Theme provider. The editor never touches `generated/` or runs
+`itr render`; rendered icons refresh on the next wallpaper/theme run as usual.
 
 ## Live appearance refresh
 
@@ -147,7 +155,7 @@ Typecheck is local and authoritative; CI deliberately has no self-hosted job
 Run the app from this checkout:
 
 ```sh
-ICME_REPO_ROOT=/path/to/dotfiles-v3 ags run -d .
+DOTFILES_DEV_INPUTS_ROOT=/path/to/dotfiles-assets ags run -d .
 ```
 
 ## Repo layout
@@ -161,7 +169,8 @@ lib/svg.ts                  template parsing + preview painting (pure)
 lib/templates.ts            template edit model (pure)
 lib/diff.ts                 YAML diff rendering (pure)
 lib/substitute.ts           display-only {{PLACEHOLDER}} substitution (pure)
-lib/inputs.ts               repo/spine input resolution (GJS)
+lib/targets.ts              pure installed/repo target paths (node-tested)
+lib/inputs.ts               target detection + input resolution (GJS)
 lib/itr.ts                  typed `itr mapping ...` CLI wrapper (GJS)
 lib/icme-saved.ts           pure `icme.saved` emit shape (generated binding)
 lib/icme-saved-gio.ts       hub `Emit` transport (GJS)
