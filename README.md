@@ -131,15 +131,16 @@ retargets `defaults.yaml` and names the groups shadowing the placeholder.
 
 ## Local development
 
-The program tuple is `ags-platform` `v1.1.0` (Generations v3 Appearance
-consumer with the required `surface.window` role) / `contracts`
+The program tuple is `ags-platform` `v1.2.0` (Generations v3 Appearance
+consumer with the required `surface.window` role plus the media-controls/settings
+icon-registry release) / `contracts`
 `v0.12.0` (generation + appearance token vocabulary plus the host-defaults,
 format-aware-consumer and window-role vocabulary) / `dotfiles-assets`. Those
 tags are local-only in this run; the local gates use a gitignored symlink under
 `.dev/`.
 
 ```sh
-ln -s ../../../ags-platform .dev/ags-platform/v1.1.0   # or use AGS_PLATFORM_DEV
+ln -s ../../../ags-platform .dev/ags-platform/v1.2.0   # or use AGS_PLATFORM_DEV
 make test          # pure unit tests (Node only)
 make conformance   # manifest + handler + template gate
 make drift         # shared event client <-> contracts drift gate

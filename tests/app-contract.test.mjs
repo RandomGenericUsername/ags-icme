@@ -237,9 +237,9 @@ test("the contracts v0.12.0 schema keeps restart invalid for this app", () => {
   assert.equal(IDENTITY.holdsUnsavedState, true);
 });
 
-test("the Makefile pins the v1.1.0 appearance provider and v0.12.0 contracts", () => {
+test("the Makefile pins the v1.2.0 appearance provider and v0.12.0 contracts", () => {
   const makefile = readText("Makefile");
-  assert.match(makefile, /^AGS_PLATFORM_VERSION := v1\.1\.0$/m);
+  assert.match(makefile, /^AGS_PLATFORM_VERSION := v1\.2\.0$/m);
   assert.match(makefile, /^CONTRACTS_VERSION := v0\.12\.0$/m);
 });
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.6.1 — 2026-11-19
+
+- Bump the local dev/test/CI `ags-platform` pin from v1.1.0 to v1.2.0 (the
+  media-controls/settings icon-registry release) in the Makefile, CI, README,
+  AGENTS and the source pin assertion. The composition tuple is now
+  `ags-platform` v1.2.0 / `contracts` v0.12.0; `contracts` stays at v0.12.0.
+- Dev-pin parity release only: no app/UI/handler behavior change, no change to
+  `lib/`, `ui/`, `style.css`, the edit-target feature or `contracts`.
+
 ## v0.6.0 — 2026-11-19
 
 - The Inputs pane now resolves two explicit edit targets: the installed spine

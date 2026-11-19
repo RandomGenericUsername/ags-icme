@@ -1,15 +1,16 @@
 .PHONY: help platform-dev deps types test conformance drift ci bundle typecheck gates clean-tags
 
 # The program tuple this app builds/tests against (AD-31/AD-34). Platform
-# v1.1.0 is the Generations v3 Appearance consumer (one composed palette + skin
+# v1.2.0 is the Generations v3 Appearance consumer (one composed palette + skin
 # + mode sheet read from `current/manifest.json` + `current/appearance/<app>.css`,
 # with an `appearance-refresh <genHash>` handler) plus the REQ-020 required
-# `surface.window` role; contracts v0.12.0 is the
+# `surface.window` role and the media-controls/settings icon-registry release;
+# contracts v0.12.0 is the
 # generation/appearance token/manifest vocabulary plus the host-defaults,
 # format-aware-consumer and window-role vocabulary. Both are LOCAL-ONLY in this
 # run: local gates symlink them from .dev/ (gitignored), CI checks out the tags
 # explicitly once published.
-AGS_PLATFORM_VERSION := v1.1.0
+AGS_PLATFORM_VERSION := v1.2.0
 CONTRACTS_VERSION := v0.12.0
 AGS_PLATFORM_REPO := https://github.com/RandomGenericUsername/ags-platform.git
 AGS_PLATFORM_DEV ?=
@@ -32,7 +33,7 @@ help:
 	@echo "make gates        all local gates: test + conformance + drift + bundle + typecheck"
 	@echo ""
 	@echo "Local-only tuple: put a checkout/symlink at"
-	@echo "  .dev/ags-platform/v1.1.0  (or AGS_PLATFORM_DEV=/path/to/ags-platform)"
+	@echo "  .dev/ags-platform/v1.2.0  (or AGS_PLATFORM_DEV=/path/to/ags-platform)"
 	@echo "and a contracts checkout at ../contracts (or set CONTRACTS_ROOT)."
 
 # The platform shortcut. It MUST point outside node_modules: Node refuses to
