@@ -15,6 +15,7 @@
 - [REQ-005-appearance-migration/ticket.md](./REQ-005-appearance-migration/ticket.md) — Migrate ICME to the v2 Appearance plane | `done` | links: worktree .worktrees/REQ-005/, branch ticket/REQ-005-appearance-migration
 - [REQ-006-layout-default-size/ticket.md](./REQ-006-layout-default-size/ticket.md) — Restore the pre-v2 window default size fallback | `done` | links: worktree .worktrees/REQ-006/, branch ticket/REQ-006-layout-default-size
 - [REQ-007-generations-v3/ticket.md](./REQ-007-generations-v3/ticket.md) — Consume Generations v3 and the generation-bound appearance refresh | `done` | links: worktree .worktrees/REQ-007/, branch ticket/REQ-007-generations-v3
+- [REQ-008-edit-targets/ticket.md](./REQ-008-edit-targets/ticket.md) — Replace manual ICME path pickers with an installed/repo edit-target dropdown | `review` | links: worktree .worktrees/REQ-008/, branch ticket/REQ-008-edit-targets
 
 ## Bugs
 
