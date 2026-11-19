@@ -2,7 +2,7 @@
 id: REQ-008
 title: "Replace manual ICME path pickers with an installed/repo edit-target dropdown"
 kind: requirement
-status: review
+status: done
 lane: 3
 links:
   openspec: none
@@ -98,8 +98,31 @@ were executed from scratch in this worktree; nothing was committed.
   untracked `lib/targets.ts`, `tests/targets.mjs` and this ticket. No
   `installer.pin`, CHANGELOG, package/version metadata or pin changes.
 
+## Release and deploy evidence
+
+Shipped 2026-11-19.
+
+- `v0.6.0` release commit `056626c` (`docs(REQ-008): release v0.6.0`).
+- Annotated tag `v0.6.0` created on that commit and pushed to `origin`;
+  `git rev-parse v0.6.0^{}` resolves to `056626cdc908f32198f538a9e635144f792cc3ed`.
+  The tag was not moved or recreated.
+- Composition pin: dotfiles-v3 REQ-133 (`apps.yaml` and
+  `FINAL_APP_RELEASES`) pins ags-icme `v0.6.0`, release commit `ad07f1ea`.
+- Provision/apply installed `v0.6.0` into the spine:
+  `~/.local/share/dotfiles/apps/icme/pinned` contains `v0.6.0`, and the
+  spine links resolve to `apps/icme/v0.6.0`.
+- `dotfiles-provision verify --expected-engine-tag v0.1.95` — **exit 0**:
+  `ok=343 changed=2 unreachable=0 failed=0 skipped=46`.
+- `dotfiles-runtime doctor` — **exit 0**: desktop clean (28 items), watch
+  health ok, palette v1 conforming, supervision ok.
+- The editor is running live; `ags list` includes
+  `icon-color-mapping-editor`.
+- Note on the deploy run: apply's own final summary was not captured because
+  the 900s harness cutoff ended the run while it was already in the trailing
+  verify role. No final summary was printed by apply; the standalone verify
+  above is the authoritative check and passed.
+
 ## Status
 
-In review on `ticket/REQ-008-edit-targets`; worktree `.worktrees/REQ-008/`.
-Not tagged, released or merged: the branch stays open until the operator
-approves shipping.
+Done. Released as `v0.6.0` on `main` and deployed through composition
+REQ-133 (dotfiles-v3 `v0.2.6`).
