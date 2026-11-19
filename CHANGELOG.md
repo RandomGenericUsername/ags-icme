@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.6.0 — 2026-11-19
+
+- The Inputs pane now resolves two explicit edit targets: the installed spine
+  and the `dotfiles-assets` checkout. The manual path pickers are replaced by
+  one target dropdown plus read-only resolved paths.
+- Repository detection checks `DOTFILES_DEV_INPUTS_ROOT`, `ICME_REPO_ROOT`, a
+  cwd ancestor, a sibling `dotfiles-assets`, and the legacy `dotfiles-v3`
+  layout; the default target is the repo when one is detected.
+- Pending-lock behavior is preserved: switching targets with pending edits
+  still prompts, and discarding pending edits on switch is unchanged.
+- New `lib/targets.ts` with `tests/targets.mjs` coverage.
+- Appearance refresh, the save path and `icme.saved` behavior are unchanged.
+
 ## v0.5.2 — 2026-11-12
 
 - Bump the local dev pins to `ags-platform` v1.1.0 (the REQ-020 required
